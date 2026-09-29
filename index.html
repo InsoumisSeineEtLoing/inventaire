@@ -1,156 +1,192 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="h-full bg-slate-50">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gestion de Matériel Militant</title>
+  <title>Inventaire & Qui a quoi - Groupe Militant</title>
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Firebase JS SDK -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff1f2',
+              100: '#ffe4e6',
+              600: '#e11d48',
+              700: '#be123c',
+              800: '#9f1239',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800 pb-20">
+<body class="h-full text-slate-800 flex flex-col antialiased bg-slate-50 pb-20">
 
-  <!-- Header -->
-  <header class="bg-red-700 text-white p-4 shadow-md sticky top-0 z-30">
-    <div class="max-w-4xl mx-auto flex justify-between items-center">
-      <div>
-        <h1 class="text-xl font-bold flex items-center gap-2">
-          <i data-lucide="box"></i> Inventaire Militant
-        </h1>
-        <p class="text-xs text-red-200">Suivi & Synchronisation en direct</p>
-      </div>
-      <div class="flex gap-2">
-        <button onclick="openModal('categoriesModal')" class="bg-red-800 hover:bg-red-900 px-3 py-1.5 rounded text-xs flex items-center gap-1 font-semibold transition">
-          <i data-lucide="tags" class="w-4 h-4"></i> Types
-        </button>
-        <button onclick="openModal('militantsModal')" class="bg-red-800 hover:bg-red-900 px-3 py-1.5 rounded text-xs flex items-center gap-1 font-semibold transition">
-          <i data-lucide="users" class="w-4 h-4"></i> Militants
-        </button>
+  <!-- Header Navigation -->
+  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 bg-brand-600 rounded-lg">
+            <i data-lucide="box" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-bold leading-none">Inventaire Militant</h1>
+            <p class="text-xs text-slate-400 mt-1">Gestion &amp; Suivi du matériel</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="openModal('categoriesModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition border border-slate-700">
+            <i data-lucide="tags" class="w-4 h-4 text-brand-600"></i>
+            <span>Types</span>
+          </button>
+          <button onclick="openModal('militantsModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition border border-slate-700">
+            <i data-lucide="users" class="w-4 h-4 text-brand-600"></i>
+            <span>Militants</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- Navigation par onglets -->
-  <main class="max-w-4xl mx-auto p-4">
-    <div class="flex border-b border-gray-300 mb-4 bg-white rounded-t-lg overflow-hidden shadow-sm">
-      <button id="tab-material" onclick="switchTab('material')" class="flex-1 py-3 text-center font-semibold text-red-700 border-b-2 border-red-700 flex justify-center items-center gap-2">
-        <i data-lucide="package"></i> Matériel (<span id="matCount">0</span>)
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex-1 w-full">
+    <!-- Navigation Tabs -->
+    <div class="flex border-b border-slate-200 mb-6 bg-white rounded-xl shadow-sm p-1">
+      <button id="tab-material" onclick="switchTab('material')" class="flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-brand-700 bg-brand-50 flex justify-center items-center gap-2 transition">
+        <i data-lucide="package" class="w-4 h-4"></i>
+        <span>Matériel</span>
+        <span id="matCount" class="bg-brand-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
       </button>
-      <button id="tab-militants" onclick="switchTab('militants')" class="flex-1 py-3 text-center font-semibold text-gray-500 hover:text-red-700 flex justify-center items-center gap-2">
-        <i data-lucide="user-check"></i> Par Militant (<span id="militantCount">0</span>)
+      <button id="tab-militants" onclick="switchTab('militants')" class="flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-slate-600 hover:text-slate-900 flex justify-center items-center gap-2 transition">
+        <i data-lucide="user-check" class="w-4 h-4"></i>
+        <span>Par Militant</span>
+        <span id="militantCount" class="bg-slate-200 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
       </button>
     </div>
 
-    <!-- Filtres et Recherche -->
-    <div class="bg-white p-3 rounded-lg shadow-sm mb-4 flex flex-col sm:flex-row gap-2">
+    <!-- Filters & Search -->
+    <div class="bg-white p-4 rounded-xl shadow-sm mb-6 border border-slate-200 flex flex-col sm:flex-row gap-3">
       <div class="relative flex-1">
-        <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-400"></i>
-        <input type="text" id="searchInput" oninput="renderApp()" placeholder="Rechercher du matériel, un militant..." class="w-full pl-9 pr-3 py-1.5 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+        <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-slate-400"></i>
+        <input type="text" id="searchInput" oninput="renderApp()" placeholder="Rechercher du matériel, un camarade..." class="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 bg-slate-50">
       </div>
-      <select id="categoryFilter" onchange="renderApp()" class="border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 bg-white">
+      <select id="categoryFilter" onchange="renderApp()" class="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 bg-slate-50 text-slate-700">
         <option value="ALL">Toutes les catégories</option>
       </select>
     </div>
 
-    <!-- Vue 1: Liste du matériel -->
-    <div id="view-material" class="space-y-3"></div>
+    <!-- View 1: Material List -->
+    <div id="view-material" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
-    <!-- Vue 2: Liste par militant -->
-    <div id="view-militants" class="hidden space-y-4"></div>
+    <!-- View 2: Militants List -->
+    <div id="view-militants" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4"></div>
   </main>
 
-  <!-- Bouton d'ajout flottant -->
-  <button onclick="openAddMaterialModal()" class="fixed bottom-5 right-5 bg-red-600 hover:bg-red-700 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition transform active:scale-95 z-20">
+  <!-- Floating Add Button -->
+  <button onclick="openAddMaterialModal()" class="fixed bottom-6 right-6 bg-brand-600 hover:bg-brand-700 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition transform active:scale-95 z-20">
     <i data-lucide="plus" class="w-6 h-6"></i>
   </button>
 
-  <!-- MODAL: Ajouter / Éditer Matériel -->
-  <div id="materialModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-      <button onclick="closeModal('materialModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-        <i data-lucide="x"></i>
+  <!-- MODAL: Material Form -->
+  <div id="materialModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeModal('materialModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-5 h-5"></i>
       </button>
-      <h2 id="materialModalTitle" class="text-lg font-bold mb-4">Ajouter du matériel</h2>
+      <h2 id="materialModalTitle" class="text-lg font-bold text-slate-900 mb-4">Ajouter du matériel</h2>
       <form id="materialForm" onsubmit="saveMaterial(event)" class="space-y-4">
         <input type="hidden" id="matId">
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Nom de l'élément / Description</label>
-          <input type="text" id="matName" required placeholder="ex: Barnum 3x3m LFI, Affiches A3, Megaphone..." class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-red-500 outline-none">
+          <label class="block text-xs font-medium text-slate-700 mb-1">Nom / Description du matériel</label>
+          <input type="text" id="matName" required placeholder="ex: Barnum 3x3 LFI, Megaphone, Drapeaux" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none">
         </div>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Catégorie / Type</label>
-            <select id="matCategory" required class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-red-500 outline-none bg-white"></select>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Type de matériel</label>
+            <select id="matCategory" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none bg-white"></select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Quantité</label>
-            <input type="number" id="matQuantity" min="1" value="1" required class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-red-500 outline-none">
+            <label class="block text-xs font-medium text-slate-700 mb-1">Quantité</label>
+            <input type="number" id="matQuantity" min="1" value="1" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none">
           </div>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">Attribué à (Militant)</label>
-          <select id="matHolder" required class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-red-500 outline-none bg-white"></select>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Détenteur (Militant / Stock)</label>
+          <select id="matHolder" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none bg-white"></select>
         </div>
         <div>
-          <label class="block text-xs font-semibold text-gray-600 mb-1">État / Remarques (Optionnel)</label>
-          <input type="text" id="matNotes" placeholder="ex: Pied légèrement abîmé, Dans le sac bleu..." class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-red-500 outline-none">
+          <label class="block text-xs font-medium text-slate-700 mb-1">Notes / État (Optionnel)</label>
+          <input type="text" id="matNotes" placeholder="ex: Dans le garage de Luc, housse légèrement tachée" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none">
         </div>
         <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeModal('materialModal')" class="px-4 py-2 border rounded text-sm hover:bg-gray-100">Annuler</button>
-          <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 font-semibold">Enregistrer</button>
+          <button type="button" onclick="closeModal('materialModal')" class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">Annuler</button>
+          <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium shadow-sm">Enregistrer</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: Gérer les Types de matériel -->
-  <div id="categoriesModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-      <button onclick="closeModal('categoriesModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-        <i data-lucide="x"></i>
+  <!-- MODAL: Manage Categories -->
+  <div id="categoriesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeModal('categoriesModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-5 h-5"></i>
       </button>
-      <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-        <i data-lucide="tags" class="text-red-600"></i> Types de matériel
+      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <i data-lucide="tags" class="w-5 h-5 text-brand-600"></i> Types de matériel
       </h2>
       <form onsubmit="addCategory(event)" class="flex gap-2 mb-4">
-        <input type="text" id="newCategoryName" placeholder="Nouveau type (ex: Groupe Électrogène)" required class="flex-1 border rounded p-2 text-sm outline-none focus:ring-2 focus:ring-red-500">
-        <button type="submit" class="bg-red-600 text-white px-3 py-2 rounded text-sm font-semibold hover:bg-red-700 flex items-center gap-1">
+        <input type="text" id="newCategoryName" placeholder="Nouveau type (ex: Groupe Électrogène)" required class="flex-1 border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-600">
+        <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm">
           <i data-lucide="plus" class="w-4 h-4"></i> Ajouter
         </button>
       </form>
-      <div id="categoriesList" class="space-y-2 border-t pt-3"></div>
+      <div id="categoriesList" class="space-y-2 border-t border-slate-100 pt-3"></div>
     </div>
   </div>
 
-  <!-- MODAL: Gérer les Militants -->
-  <div id="militantsModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-      <button onclick="closeModal('militantsModal')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-        <i data-lucide="x"></i>
+  <!-- MODAL: Manage Militants -->
+  <div id="militantsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeModal('militantsModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+        <i data-lucide="x" class="w-5 h-5"></i>
       </button>
-      <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
-        <i data-lucide="users" class="text-red-600"></i> Liste des militants
+      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <i data-lucide="users" class="w-5 h-5 text-brand-600"></i> Gestion des militants
       </h2>
-      <form onsubmit="addMilitant(event)" class="space-y-2 mb-4 bg-gray-50 p-3 rounded-lg border">
-        <div class="text-xs font-semibold text-gray-600">Ajouter un militant</div>
-        <input type="text" id="newMilitantName" placeholder="Nom Prénom" required class="w-full border rounded p-2 text-sm outline-none focus:ring-2 focus:ring-red-500">
+      <form onsubmit="addMilitant(event)" class="space-y-3 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
+        <div class="text-xs font-semibold text-slate-600">Nouveau militant</div>
+        <input type="text" id="newMilitantName" placeholder="Nom Prénom" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-brand-600">
         <div class="grid grid-cols-2 gap-2">
-          <input type="tel" id="newMilitantPhone" placeholder="Téléphone (ex: 0612345678)" class="border rounded p-2 text-sm outline-none">
-          <input type="text" id="newMilitantCity" placeholder="Ville / Secteur" class="border rounded p-2 text-sm outline-none">
+          <input type="tel" id="newMilitantPhone" placeholder="Téléphone" class="border border-slate-200 rounded-lg p-2 text-sm outline-none">
+          <input type="text" id="newMilitantCity" placeholder="Ville / Secteur" class="border border-slate-200 rounded-lg p-2 text-sm outline-none">
         </div>
-        <button type="submit" class="w-full bg-red-600 text-white py-2 rounded text-sm font-semibold hover:bg-red-700 flex justify-center items-center gap-1">
-          <i data-lucide="user-plus" class="w-4 h-4"></i> Enregistrer le militant
+        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2 rounded-lg text-sm font-medium transition shadow-sm">
+          Enregistrer le militant
         </button>
       </form>
-      <div id="militantsList" class="space-y-2 border-t pt-3"></div>
+      <div id="militantsList" class="space-y-2 border-t border-slate-100 pt-3"></div>
     </div>
   </div>
 
-  <!-- SCRIPT LOGIQUE & FIREBASE -->
+  <!-- Logic & Firebase Config -->
   <script>
-    // Configuration Firebase pré-remplie avec vos clés
+    // Vos identifiants Firebase exacts
     const firebaseConfig = {
       apiKey: "AIzaSyC1IBbYeNVdTXkpeS24HSagh9JXvOO3km4",
       authDomain: "inventaire-militant.firebaseapp.com",
@@ -165,15 +201,14 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Données par défaut
     let categories = ["Barnum / Table", "Sonorisation", "Affichage / Affiches", "Tracts / Documents", "Drapeaux / Banderoles", "Autre"];
     let militants = [
       { id: 'm1', name: 'Stock Local / Réserve', phone: '', city: 'Local' },
-      { id: 'm2', name: 'Camarade Exemple', phone: '06 00 00 00 00', city: 'Secteur Centre' }
+      { id: 'm2', name: 'Hugo', phone: '', city: 'Secteur' }
     ];
     let materials = [];
 
-    // Connexion Firebase en Temps Réel
+    // Synchro Firebase en direct
     db.ref('inventory').on('value', (snapshot) => {
       const data = snapshot.val();
       if (data) {
@@ -196,30 +231,32 @@
       });
     }
 
-    // Gestion Onglets
     function switchTab(tab) {
+      const matBtn = document.getElementById('tab-material');
+      const milBtn = document.getElementById('tab-militants');
+      const matView = document.getElementById('view-material');
+      const milView = document.getElementById('view-militants');
+
       if (tab === 'material') {
-        document.getElementById('view-material').classList.remove('hidden');
-        document.getElementById('view-militants').classList.add('hidden');
-        document.getElementById('tab-material').className = "flex-1 py-3 text-center font-semibold text-red-700 border-b-2 border-red-700 flex justify-center items-center gap-2";
-        document.getElementById('tab-militants').className = "flex-1 py-3 text-center font-semibold text-gray-500 hover:text-red-700 flex justify-center items-center gap-2";
+        matView.classList.remove('hidden');
+        milView.classList.add('hidden');
+        matBtn.className = "flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-brand-700 bg-brand-50 flex justify-center items-center gap-2 transition";
+        milBtn.className = "flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-slate-600 hover:text-slate-900 flex justify-center items-center gap-2 transition";
       } else {
-        document.getElementById('view-material').classList.add('hidden');
-        document.getElementById('view-militants').classList.remove('hidden');
-        document.getElementById('tab-militants').className = "flex-1 py-3 text-center font-semibold text-red-700 border-b-2 border-red-700 flex justify-center items-center gap-2";
-        document.getElementById('tab-material').className = "flex-1 py-3 text-center font-semibold text-gray-500 hover:text-red-700 flex justify-center items-center gap-2";
+        matView.classList.add('hidden');
+        milView.classList.remove('hidden');
+        milBtn.className = "flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-brand-700 bg-brand-50 flex justify-center items-center gap-2 transition";
+        matBtn.className = "flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-slate-600 hover:text-slate-900 flex justify-center items-center gap-2 transition";
       }
     }
 
-    // Affichage principal
     function renderApp() {
       const search = document.getElementById('searchInput').value.toLowerCase();
       const catFilter = document.getElementById('categoryFilter').value;
 
-      // Update dropdowns
       updateSelectOptions();
 
-      // Render Vue Matériel
+      // Material View
       const matContainer = document.getElementById('view-material');
       matContainer.innerHTML = '';
 
@@ -233,27 +270,27 @@
       document.getElementById('militantCount').innerText = militants.length;
 
       if (filteredMaterials.length === 0) {
-        matContainer.innerHTML = `<div class="text-center py-8 text-gray-400">Aucun matériel trouvé.</div>`;
+        matContainer.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm bg-white rounded-xl border border-slate-200">Aucun matériel trouvé.</div>`;
       } else {
         filteredMaterials.forEach(m => {
           matContainer.innerHTML += `
-            <div class="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center">
-              <div class="space-y-1">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-gray-800">${m.name}</span>
-                  <span class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-medium">x${m.quantity}</span>
-                  <span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded">${m.category}</span>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between hover:border-slate-300 transition">
+              <div>
+                <div class="flex justify-between items-start mb-2">
+                  <h3 class="font-semibold text-slate-900 text-base">${m.name}</h3>
+                  <span class="bg-brand-50 text-brand-700 font-bold text-xs px-2.5 py-1 rounded-full border border-brand-100">x${m.quantity}</span>
                 </div>
-                <div class="text-xs text-gray-500 flex items-center gap-1">
-                  <i data-lucide="user" class="w-3 h-3"></i> Chez: <strong class="text-gray-700">${m.holder}</strong>
+                <div class="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded font-medium mb-3">${m.category}</div>
+                <div class="text-xs text-slate-500 flex items-center gap-1.5 mb-1">
+                  <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i> Chez : <strong class="text-slate-700">${m.holder}</strong>
                 </div>
-                ${m.notes ? `<div class="text-xs text-gray-400 italic">${m.notes}</div>` : ''}
+                ${m.notes ? `<div class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100 mt-2">${m.notes}</div>` : ''}
               </div>
-              <div class="flex gap-1">
-                <button onclick="editMaterial('${m.id}')" class="p-2 text-gray-400 hover:text-blue-600 rounded">
+              <div class="flex justify-end gap-1 border-t border-slate-100 pt-3 mt-3">
+                <button onclick="editMaterial('${m.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-50 transition">
                   <i data-lucide="edit-3" class="w-4 h-4"></i>
                 </button>
-                <button onclick="deleteMaterial('${m.id}')" class="p-2 text-gray-400 hover:text-red-600 rounded">
+                <button onclick="deleteMaterial('${m.id}')" class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-50 transition">
                   <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
               </div>
@@ -262,32 +299,32 @@
         });
       }
 
-      // Render Vue Militants
+      // Militants View
       const milContainer = document.getElementById('view-militants');
       milContainer.innerHTML = '';
 
       militants.forEach(militant => {
         const itemsHold = materials.filter(m => m.holder === militant.name);
         milContainer.innerHTML += `
-          <div class="bg-white rounded-lg shadow-sm border p-4">
-            <div class="flex justify-between items-start mb-2">
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+            <div class="flex justify-between items-start mb-3">
               <div>
-                <h3 class="font-bold text-gray-800 flex items-center gap-2">
+                <h3 class="font-bold text-slate-900 flex items-center gap-2">
                   ${militant.name}
-                  ${militant.city ? `<span class="text-xs font-normal bg-gray-100 text-gray-600 px-2 py-0.5 rounded">${militant.city}</span>` : ''}
+                  ${militant.city ? `<span class="text-xs font-normal bg-slate-100 text-slate-600 px-2 py-0.5 rounded">${militant.city}</span>` : ''}
                 </h3>
-                ${militant.phone ? `<a href="tel:${militant.phone}" class="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-0.5"><i data-lucide="phone" class="w-3 h-3"></i> ${militant.phone}</a>` : ''}
+                ${militant.phone ? `<a href="tel:${militant.phone}" class="text-xs text-brand-600 hover:underline flex items-center gap-1 mt-0.5"><i data-lucide="phone" class="w-3 h-3"></i> ${militant.phone}</a>` : ''}
               </div>
-              <span class="text-xs bg-red-50 text-red-700 font-semibold px-2.5 py-1 rounded-full border border-red-100">
+              <span class="text-xs bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded-full border border-slate-200">
                 ${itemsHold.reduce((acc, curr) => acc + Number(curr.quantity), 0)} élément(s)
               </span>
             </div>
-            <div class="border-t pt-2 mt-2 space-y-1">
-              ${itemsHold.length === 0 ? '<div class="text-xs text-gray-400 italic">Aucun matériel attribué.</div>' : ''}
+            <div class="border-t border-slate-100 pt-2 space-y-1.5">
+              ${itemsHold.length === 0 ? '<div class="text-xs text-slate-400 italic">Aucun matériel attribué.</div>' : ''}
               ${itemsHold.map(item => `
-                <div class="text-xs bg-gray-50 p-2 rounded flex justify-between items-center">
-                  <span><strong>${item.name}</strong> (x${item.quantity}) - <span class="text-gray-500">${item.category}</span></span>
-                  <button onclick="editMaterial('${item.id}')" class="text-blue-600 hover:underline text-[10px]">Transférer</button>
+                <div class="text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex justify-between items-center">
+                  <span><strong class="text-slate-800">${item.name}</strong> (x${item.quantity})</span>
+                  <button onclick="editMaterial('${item.id}')" class="text-brand-600 hover:underline text-[11px] font-medium">Transférer</button>
                 </div>
               `).join('')}
             </div>
@@ -316,7 +353,6 @@
       holderSelect.innerHTML = militants.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
     }
 
-    // Actions Matériel
     function openAddMaterialModal() {
       document.getElementById('materialModalTitle').innerText = "Ajouter du matériel";
       document.getElementById('matId').value = "";
@@ -368,7 +404,7 @@
       }
     }
 
-    // Actions Categories
+    // Gestion des catégories / Types de matériel (Ajout + Édition/Renommage)
     function addCategory(e) {
       e.preventDefault();
       const name = document.getElementById('newCategoryName').value.trim();
@@ -376,6 +412,22 @@
         categories.push(name);
         syncToFirebase();
         document.getElementById('newCategoryName').value = '';
+      }
+    }
+
+    function editCategory(oldName) {
+      const newName = prompt("Nouveau nom pour ce type de matériel :", oldName);
+      if (newName && newName.trim() !== "" && newName !== oldName) {
+        const trimmed = newName.trim();
+        const index = categories.indexOf(oldName);
+        if (index !== -1) {
+          categories[index] = trimmed;
+          // Mettre à jour tout le matériel associé
+          materials.forEach(m => {
+            if (m.category === oldName) m.category = trimmed;
+          });
+          syncToFirebase();
+        }
       }
     }
 
@@ -391,16 +443,21 @@
     function renderCategoriesList() {
       const list = document.getElementById('categoriesList');
       list.innerHTML = categories.map(c => `
-        <div class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
-          <span>${c}</span>
-          <button onclick="deleteCategory('${c}')" class="text-red-500 hover:text-red-700">
-            <i data-lucide="trash" class="w-4 h-4"></i>
-          </button>
+        <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg text-sm border border-slate-100">
+          <span class="font-medium text-slate-700">${c}</span>
+          <div class="flex items-center gap-1">
+            <button onclick="editCategory('${c}')" class="p-1 text-slate-400 hover:text-blue-600 rounded">
+              <i data-lucide="edit-2" class="w-4 h-4"></i>
+            </button>
+            <button onclick="deleteCategory('${c}')" class="p-1 text-slate-400 hover:text-red-600 rounded">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
         </div>
       `).join('');
     }
 
-    // Actions Militants
+    // Gestion des militants
     function addMilitant(e) {
       e.preventDefault();
       const name = document.getElementById('newMilitantName').value.trim();
@@ -418,7 +475,7 @@
 
     function deleteMilitant(id, name) {
       if (materials.some(m => m.holder === name)) {
-        alert("Impossible de supprimer ce militant car du matériel lui est actuellement attribué !");
+        alert("Impossible de supprimer ce militant car du matériel lui est attribué !");
         return;
       }
       militants = militants.filter(m => m.id !== id);
@@ -428,21 +485,20 @@
     function renderMilitantsList() {
       const list = document.getElementById('militantsList');
       list.innerHTML = militants.map(m => `
-        <div class="flex justify-between items-center p-2 bg-gray-50 rounded text-sm">
+        <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg text-sm border border-slate-100">
           <div>
-            <div class="font-semibold">${m.name}</div>
-            <div class="text-xs text-gray-500">${m.phone || 'Pas de tél'} ${m.city ? '• ' + m.city : ''}</div>
+            <div class="font-semibold text-slate-800">${m.name}</div>
+            <div class="text-xs text-slate-500">${m.phone || 'Pas de tél'} ${m.city ? '• ' + m.city : ''}</div>
           </div>
           ${m.name !== 'Stock Local / Réserve' ? `
-            <button onclick="deleteMilitant('${m.id}', '${m.name}')" class="text-red-500 hover:text-red-700">
-              <i data-lucide="trash" class="w-4 h-4"></i>
+            <button onclick="deleteMilitant('${m.id}', '${m.name}')" class="p-1 text-slate-400 hover:text-red-600 rounded">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
             </button>
           ` : ''}
         </div>
       `).join('');
     }
 
-    // Helpers Modal
     function openModal(id) {
       document.getElementById(id).classList.remove('hidden');
       document.getElementById(id).classList.add('flex');
@@ -453,7 +509,6 @@
       document.getElementById(id).classList.remove('flex');
     }
 
-    // Initialisation icons
     lucide.createIcons();
   </script>
 </body>
