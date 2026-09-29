@@ -1,192 +1,242 @@
 <!DOCTYPE html>
-<html lang="fr" class="h-full bg-slate-50">
+<html lang="fr" class="h-full bg-slate-100">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inventaire & Qui a quoi - Groupe Militant</title>
-  <!-- Tailwind CSS -->
+  <title>Matos Militant - Qui a quoi ? & Gestion d'équipe</title>
+  
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#fff1f2',
-              100: '#ffe4e6',
-              600: '#e11d48',
-              700: '#be123c',
-              800: '#9f1239',
-            }
-          }
-        }
-      }
-    }
-  </script>
+  
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
     body { font-family: 'Inter', sans-serif; }
   </style>
-  <!-- Firebase SDKs -->
+
+  <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 </head>
-<body class="h-full text-slate-800 flex flex-col antialiased bg-slate-50 pb-20">
+<body class="h-full text-slate-800 flex flex-col antialiased bg-slate-100 min-h-screen">
 
-  <!-- Header Navigation -->
-  <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+  <!-- Top Dark Header -->
+  <header class="bg-[#0f172a] text-white sticky top-0 z-30 shadow-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Title -->
         <div class="flex items-center space-x-3">
-          <div class="p-2 bg-brand-600 rounded-lg">
-            <i data-lucide="box" class="w-6 h-6 text-white"></i>
+          <div class="p-2.5 bg-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-rose-900/30">
+            <i data-lucide="users" class="w-6 h-6 text-white"></i>
           </div>
           <div>
-            <h1 class="text-lg font-bold leading-none">Inventaire Militant</h1>
-            <p class="text-xs text-slate-400 mt-1">Gestion &amp; Suivi du matériel</p>
+            <h1 class="text-xl font-extrabold leading-none tracking-tight text-white">Matos Militant</h1>
+            <p class="text-xs text-slate-400 mt-1 font-medium">Qui a quoi ? &amp; Gestion d'équipe</p>
           </div>
         </div>
-        <div class="flex items-center space-x-2">
-          <button onclick="openModal('categoriesModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition border border-slate-700">
-            <i data-lucide="tags" class="w-4 h-4 text-brand-600"></i>
-            <span>Types</span>
+
+        <!-- Right Header Actions -->
+        <div class="flex items-center space-x-3">
+          <button onclick="openModal('categoriesModal')" title="Gérer les types de matériel" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700">
+            <i data-lucide="tags" class="w-4 h-4 text-rose-500"></i>
+            <span class="hidden sm:inline">Types</span>
           </button>
-          <button onclick="openModal('militantsModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition border border-slate-700">
-            <i data-lucide="users" class="w-4 h-4 text-brand-600"></i>
-            <span>Militants</span>
+
+          <button onclick="openModal('militantsModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition border border-slate-700 shadow-sm">
+            <i data-lucide="user-check" class="w-4 h-4 text-rose-400"></i>
+            <span>Militants (<span id="militantsHeaderCount">0</span>)</span>
+          </button>
+
+          <button onclick="openAddMaterialModal()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-lg shadow-rose-900/40">
+            <i data-lucide="plus-circle" class="w-4 h-4"></i>
+            <span>+ Attribuer</span>
           </button>
         </div>
+
       </div>
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex-1 w-full">
-    <!-- Navigation Tabs -->
-    <div class="flex border-b border-slate-200 mb-6 bg-white rounded-xl shadow-sm p-1">
-      <button id="tab-material" onclick="switchTab('material')" class="flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-brand-700 bg-brand-50 flex justify-center items-center gap-2 transition">
-        <i data-lucide="package" class="w-4 h-4"></i>
-        <span>Matériel</span>
-        <span id="matCount" class="bg-brand-600 text-white text-xs px-2 py-0.5 rounded-full font-bold">0</span>
-      </button>
-      <button id="tab-militants" onclick="switchTab('militants')" class="flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-slate-600 hover:text-slate-900 flex justify-center items-center gap-2 transition">
-        <i data-lucide="user-check" class="w-4 h-4"></i>
-        <span>Par Militant</span>
-        <span id="militantCount" class="bg-slate-200 text-slate-700 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
-      </button>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
+
+    <!-- Top Summary Stat Cards Bar -->
+    <div id="statsBar" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
+      <!-- Dynamic Stat Cards inserted via JS -->
     </div>
 
-    <!-- Filters & Search -->
-    <div class="bg-white p-4 rounded-xl shadow-sm mb-6 border border-slate-200 flex flex-col sm:flex-row gap-3">
-      <div class="relative flex-1">
-        <i data-lucide="search" class="absolute left-3 top-3 w-4 h-4 text-slate-400"></i>
-        <input type="text" id="searchInput" oninput="renderApp()" placeholder="Rechercher du matériel, un camarade..." class="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 bg-slate-50">
+    <!-- Filter Bar & View Toggle -->
+    <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row gap-3 items-center justify-between">
+      
+      <!-- Toggle Tabs -->
+      <div class="bg-slate-100 p-1 rounded-xl flex w-full md:w-auto">
+        <button id="btnTabMilitants" onclick="setTab('militants')" class="flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition text-slate-900 bg-white shadow-sm flex items-center justify-center gap-2">
+          <i data-lucide="user" class="w-3.5 h-3.5"></i>
+          <span>Vue par Militant</span>
+        </button>
+        <button id="btnTabMaterial" onclick="setTab('material')" class="flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2">
+          <i data-lucide="box" class="w-3.5 h-3.5"></i>
+          <span>Vue par Matériel</span>
+        </button>
       </div>
-      <select id="categoryFilter" onchange="renderApp()" class="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 bg-slate-50 text-slate-700">
-        <option value="ALL">Toutes les catégories</option>
-      </select>
+
+      <!-- Search & Category Filters -->
+      <div class="flex items-center gap-2 w-full md:w-auto flex-1">
+        <div class="relative flex-1">
+          <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
+          <input type="text" id="searchInput" oninput="renderApp()" placeholder="Rechercher un militant, téléphone, matériel..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-500/50 focus:bg-white transition">
+        </div>
+
+        <select id="categoryFilter" onchange="renderApp()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500/50 bg-white">
+          <option value="ALL">Toutes les catégories</option>
+        </select>
+
+        <button onclick="resetFilters()" title="Réinitialiser" class="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 transition">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+      </div>
+
     </div>
 
-    <!-- View 1: Material List -->
-    <div id="view-material" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    <!-- MAIN VIEW 1: Vue par Militant -->
+    <div id="viewMilitants" class="space-y-5"></div>
 
-    <!-- View 2: Militants List -->
-    <div id="view-militants" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+    <!-- MAIN VIEW 2: Vue par Matériel -->
+    <div id="viewMaterial" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
   </main>
 
-  <!-- Floating Add Button -->
-  <button onclick="openAddMaterialModal()" class="fixed bottom-6 right-6 bg-brand-600 hover:bg-brand-700 text-white p-4 rounded-full shadow-lg flex items-center justify-center transition transform active:scale-95 z-20">
-    <i data-lucide="plus" class="w-6 h-6"></i>
-  </button>
-
-  <!-- MODAL: Material Form -->
+  <!-- MODAL 1: Attribuer / Ajouter du Matos -->
   <div id="materialModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-      <button onclick="closeModal('materialModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-100">
+      <button onclick="closeModal('materialModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
-      <h2 id="materialModalTitle" class="text-lg font-bold text-slate-900 mb-4">Ajouter du matériel</h2>
+      
+      <h2 id="materialModalTitle" class="text-base font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+        <i data-lucide="plus-circle" class="w-5 h-5 text-rose-600"></i> Attribuer du matériel
+      </h2>
+
       <form id="materialForm" onsubmit="saveMaterial(event)" class="space-y-4">
         <input type="hidden" id="matId">
+        
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Nom / Description du matériel</label>
-          <input type="text" id="matName" required placeholder="ex: Barnum 3x3 LFI, Megaphone, Drapeaux" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none">
+          <label class="block text-xs font-bold text-slate-700 mb-1">Militant destinataire</label>
+          <select id="matHolder" required class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-rose-500 outline-none bg-slate-50"></select>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Type de matériel</label>
-            <select id="matCategory" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none bg-white"></select>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Type de matériel</label>
+          <select id="matCategory" required class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-rose-500 outline-none bg-slate-50"></select>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Intitulé du matériel</label>
+            <input type="text" id="matName" required placeholder="ex: Format A2 - Rassemblement" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-rose-500 outline-none">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Quantité</label>
-            <input type="number" id="matQuantity" min="1" value="1" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Quantité</label>
+            <input type="number" id="matQuantity" min="1" value="1" required class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-rose-500 outline-none text-center">
           </div>
         </div>
+
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Détenteur (Militant / Stock)</label>
-          <select id="matHolder" required class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none bg-white"></select>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Emplacement / Détail</label>
+          <input type="text" id="matNotes" placeholder="ex: Coffre voiture, Dans son sac à dos, Chez elle..." class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-rose-500 outline-none">
         </div>
-        <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Notes / État (Optionnel)</label>
-          <input type="text" id="matNotes" placeholder="ex: Dans le garage de Luc, housse légèrement tachée" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-brand-600 outline-none">
-        </div>
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeModal('materialModal')" class="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50">Annuler</button>
-          <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium shadow-sm">Enregistrer</button>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeModal('materialModal')" class="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">Annuler</button>
+          <button type="submit" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition">Enregistrer</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- MODAL: Manage Categories -->
-  <div id="categoriesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-      <button onclick="closeModal('categoriesModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+  <!-- MODAL 2: Transferer du Matos -->
+  <div id="transferModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
+      <button onclick="closeModal('transferModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
-      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <i data-lucide="tags" class="w-5 h-5 text-brand-600"></i> Types de matériel
+      
+      <h2 class="text-base font-extrabold text-slate-900 mb-3 flex items-center gap-2">
+        <i data-lucide="arrow-left-right" class="w-5 h-5 text-indigo-600"></i> Transférer du matériel
       </h2>
+
+      <div id="transferItemDetails" class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4 text-xs"></div>
+
+      <form onsubmit="executeTransfer(event)" class="space-y-4">
+        <input type="hidden" id="transferMatId">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Nouveau détenteur (Camarade)</label>
+          <select id="transferNewHolder" required class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('transferModal')" class="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">Annuler</button>
+          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition">Confirmer le transfert</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Gérer / Éditer les Types de Matériel -->
+  <div id="categoriesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+      <button onclick="closeModal('categoriesModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      
+      <h2 class="text-base font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+        <i data-lucide="tags" class="w-5 h-5 text-rose-600"></i> Types de matériel
+      </h2>
+
+      <!-- Form Ajout Catégorie -->
       <form onsubmit="addCategory(event)" class="flex gap-2 mb-4">
-        <input type="text" id="newCategoryName" placeholder="Nouveau type (ex: Groupe Électrogène)" required class="flex-1 border border-slate-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-600">
-        <button type="submit" class="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm">
+        <input type="text" id="newCategoryInput" placeholder="Nouveau type (ex: Megaphone)" required class="flex-1 border border-slate-200 rounded-xl p-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-rose-500">
+        <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1 transition">
           <i data-lucide="plus" class="w-4 h-4"></i> Ajouter
         </button>
       </form>
+
       <div id="categoriesList" class="space-y-2 border-t border-slate-100 pt-3"></div>
     </div>
   </div>
 
-  <!-- MODAL: Manage Militants -->
+  <!-- MODAL 4: Gérer les Militants -->
   <div id="militantsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-      <button onclick="closeModal('militantsModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto">
+      <button onclick="closeModal('militantsModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
         <i data-lucide="x" class="w-5 h-5"></i>
       </button>
-      <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-        <i data-lucide="users" class="w-5 h-5 text-brand-600"></i> Gestion des militants
+      
+      <h2 class="text-base font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+        <i data-lucide="users" class="w-5 h-5 text-rose-600"></i> Liste des militants
       </h2>
-      <form onsubmit="addMilitant(event)" class="space-y-3 mb-4 bg-slate-50 p-3 rounded-xl border border-slate-200">
-        <div class="text-xs font-semibold text-slate-600">Nouveau militant</div>
-        <input type="text" id="newMilitantName" placeholder="Nom Prénom" required class="w-full border border-slate-200 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-brand-600">
+
+      <!-- Form Ajout Militant -->
+      <form onsubmit="addMilitant(event)" class="space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-4">
+        <div class="text-xs font-extrabold text-slate-700">Ajouter un camarade</div>
+        <input type="text" id="newMilName" placeholder="Nom Prénom (ex: Thomas L.) *" required class="w-full border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none focus:ring-2 focus:ring-rose-500">
         <div class="grid grid-cols-2 gap-2">
-          <input type="tel" id="newMilitantPhone" placeholder="Téléphone" class="border border-slate-200 rounded-lg p-2 text-sm outline-none">
-          <input type="text" id="newMilitantCity" placeholder="Ville / Secteur" class="border border-slate-200 rounded-lg p-2 text-sm outline-none">
+          <input type="tel" id="newMilPhone" placeholder="Téléphone (ex: 06 11 22 33 44)" class="border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none">
+          <input type="text" id="newMilRole" placeholder="Secteur / Rôle (ex: Secteur Nord)" class="border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none">
         </div>
-        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white py-2 rounded-lg text-sm font-medium transition shadow-sm">
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2 rounded-lg text-xs font-bold transition">
           Enregistrer le militant
         </button>
       </form>
+
       <div id="militantsList" class="space-y-2 border-t border-slate-100 pt-3"></div>
     </div>
   </div>
 
-  <!-- Logic & Firebase Config -->
   <script>
-    // Vos identifiants Firebase exacts
+    // Configuration Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyC1IBbYeNVdTXkpeS24HSagh9JXvOO3km4",
       authDomain: "inventaire-militant.firebaseapp.com",
@@ -201,64 +251,172 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let categories = ["Barnum / Table", "Sonorisation", "Affichage / Affiches", "Tracts / Documents", "Drapeaux / Banderoles", "Autre"];
-    let militants = [
-      { id: 'm1', name: 'Stock Local / Réserve', phone: '', city: 'Local' },
-      { id: 'm2', name: 'Hugo', phone: '', city: 'Secteur' }
-    ];
-    let materials = [];
+    // Palette de couleurs pour les badges
+    const categoryColors = {
+      "TRACTS": { bg: "bg-blue-100", text: "text-blue-700" },
+      "AFFICHES": { bg: "bg-purple-100", text: "text-purple-700" },
+      "COLLE": { bg: "bg-amber-100", text: "text-amber-800" },
+      "BARNUM": { bg: "bg-emerald-100", text: "text-emerald-700" },
+      "TABLES": { bg: "bg-indigo-100", text: "text-indigo-700" },
+      "ENCEINTE": { bg: "bg-rose-100", text: "text-rose-700" },
+      "MICRO": { bg: "bg-cyan-100", text: "text-cyan-700" }
+    };
 
-    // Synchro Firebase en direct
-    db.ref('inventory').on('value', (snapshot) => {
+    // Application State
+    let activeTab = 'militants';
+    let categories = ["Affiches", "Colle", "Tracts", "Barnum", "Tables", "Enceinte", "Micro"];
+    let militants = [
+      { id: 'm1', name: 'Thomas L.', phone: '06 11 22 33 44', role: 'Secteur Nord' },
+      { id: 'm2', name: 'Sarah K.', phone: '06 22 33 44 55', role: 'Référente tracts' }
+    ];
+    let materials = [
+      { id: 'mat1', name: 'Tracts A5 Mobilisation', category: 'Tracts', quantity: 1500, holder: 'Thomas L.', notes: 'Dans son sac à dos' },
+      { id: 'mat2', name: 'Format A2 - Rassemblement', category: 'Affiches', quantity: 100, holder: 'Thomas L.', notes: 'Coffre voiture' },
+      { id: 'mat3', name: 'Tracts A5 Mobilisation', category: 'Tracts', quantity: 3000, holder: 'Sarah K.', notes: 'Chez elle' },
+      { id: 'mat4', name: 'Seaux de 5kg prêt à l\'emploi', category: 'Colle', quantity: 2, holder: 'Sarah K.', notes: 'Garage' }
+    ];
+
+    // Synchro Realtime Firebase
+    db.ref('matos_militant').on('value', (snapshot) => {
       const data = snapshot.val();
       if (data) {
         if (data.categories) categories = data.categories;
-        if (data.militants) militants = data.militants;
-        if (data.materials) {
-          materials = Array.isArray(data.materials) ? data.materials : Object.values(data.materials);
-        } else {
-          materials = [];
-        }
+        if (data.militants) militants = Array.isArray(data.militants) ? data.militants : Object.values(data.militants);
+        if (data.materials) materials = Array.isArray(data.materials) ? data.materials : Object.values(data.materials);
       }
       renderApp();
     });
 
-    function syncToFirebase() {
-      db.ref('inventory').set({
-        categories: categories,
-        militants: militants,
-        materials: materials
+    function sync() {
+      db.ref('matos_militant').set({
+        categories,
+        militants,
+        materials
       });
     }
 
-    function switchTab(tab) {
-      const matBtn = document.getElementById('tab-material');
-      const milBtn = document.getElementById('tab-militants');
-      const matView = document.getElementById('view-material');
-      const milView = document.getElementById('view-militants');
+    function setTab(tab) {
+      activeTab = tab;
+      const bMil = document.getElementById('btnTabMilitants');
+      const bMat = document.getElementById('btnTabMaterial');
+      const vMil = document.getElementById('viewMilitants');
+      const vMat = document.getElementById('viewMaterial');
 
-      if (tab === 'material') {
-        matView.classList.remove('hidden');
-        milView.classList.add('hidden');
-        matBtn.className = "flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-brand-700 bg-brand-50 flex justify-center items-center gap-2 transition";
-        milBtn.className = "flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-slate-600 hover:text-slate-900 flex justify-center items-center gap-2 transition";
+      if (tab === 'militants') {
+        bMil.className = "flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition text-slate-900 bg-white shadow-sm flex items-center justify-center gap-2";
+        bMat.className = "flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2";
+        vMil.classList.remove('hidden');
+        vMat.classList.add('hidden');
       } else {
-        matView.classList.add('hidden');
-        milView.classList.remove('hidden');
-        milBtn.className = "flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-brand-700 bg-brand-50 flex justify-center items-center gap-2 transition";
-        matBtn.className = "flex-1 py-2.5 text-center font-medium text-sm rounded-lg text-slate-600 hover:text-slate-900 flex justify-center items-center gap-2 transition";
+        bMat.className = "flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition text-slate-900 bg-white shadow-sm flex items-center justify-center gap-2";
+        bMil.className = "flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2";
+        vMat.classList.remove('hidden');
+        vMil.classList.add('hidden');
       }
     }
 
     function renderApp() {
+      document.getElementById('militantsHeaderCount').innerText = militants.length;
+      updateSelectOptions();
+      renderStatsBar();
+
       const search = document.getElementById('searchInput').value.toLowerCase();
       const catFilter = document.getElementById('categoryFilter').value;
 
-      updateSelectOptions();
+      // 1. Vue PAR MILITANT
+      const vMil = document.getElementById('viewMilitants');
+      vMil.innerHTML = '';
 
-      // Material View
-      const matContainer = document.getElementById('view-material');
-      matContainer.innerHTML = '';
+      militants.forEach(militant => {
+        const milItems = materials.filter(m => {
+          const isHolder = m.holder === militant.name;
+          const matchSearch = militant.name.toLowerCase().includes(search) ||
+                              (militant.phone && militant.phone.includes(search)) ||
+                              m.name.toLowerCase().includes(search) ||
+                              (m.notes && m.notes.toLowerCase().includes(search));
+          const matchCat = catFilter === 'ALL' || m.category === catFilter;
+          return isHolder && matchSearch && matchCat;
+        });
+
+        // Si recherche active et aucun résultat pour ce militant, masquer le militant
+        if (search && milItems.length === 0 && !militant.name.toLowerCase().includes(search)) {
+          return;
+        }
+
+        const initial = militant.name.charAt(0).toUpperCase();
+
+        vMil.innerHTML += `
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
+            <!-- Militant Dark Header -->
+            <div class="bg-[#0f172a] text-white px-5 py-3.5 flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-rose-600 text-white font-extrabold text-sm flex items-center justify-center shadow-inner">
+                  ${initial}
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-sm tracking-tight text-white">${militant.name}</h3>
+                    <button onclick="editMilitant('${militant.id}')" class="text-slate-400 hover:text-white p-0.5">
+                      <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                  <div class="text-[11px] text-slate-400 flex items-center gap-2 font-medium">
+                    ${militant.phone ? `<span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i> ${militant.phone}</span>` : ''}
+                    ${militant.role ? `<span>• ${militant.role}</span>` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <button onclick="openAddMaterialModal('${militant.name}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700">
+                <i data-lucide="plus" class="w-3.5 h-3.5 text-rose-400"></i>
+                <span>Ajouter du matos</span>
+              </button>
+            </div>
+
+            <!-- Items Grid Owned by Militant -->
+            <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 bg-slate-50/50">
+              ${milItems.length === 0 ? '<div class="col-span-full py-4 text-center text-xs text-slate-400 italic">Aucun matériel attribué.</div>' : ''}
+              ${milItems.map(item => {
+                const colors = categoryColors[item.category.toUpperCase()] || { bg: "bg-slate-100", text: "text-slate-700" };
+                return `
+                  <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition">
+                    <div>
+                      <div class="flex justify-between items-start mb-2">
+                        <span class="${colors.bg} ${colors.text} text-[11px] font-bold px-2.5 py-0.5 rounded-md">
+                          ${item.category}
+                        </span>
+                        <span class="font-extrabold text-slate-900 text-sm">x${item.quantity}</span>
+                      </div>
+                      <h4 class="font-bold text-slate-800 text-xs mb-1">${item.name}</h4>
+                      ${item.notes ? `
+                        <div class="text-[11px] text-slate-500 flex items-center gap-1">
+                          <i data-lucide="map-pin" class="w-3 h-3 text-slate-400 flex-shrink-0"></i>
+                          <span>${item.notes}</span>
+                        </div>
+                      ` : ''}
+                    </div>
+
+                    <div class="flex justify-between items-center border-t border-slate-100 pt-2.5 mt-3">
+                      <button onclick="openTransferModal('${item.id}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                        <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i>
+                        <span>Transférer</span>
+                      </button>
+                      <div class="flex items-center gap-1 text-slate-400">
+                        <button onclick="editMaterial('${item.id}')" class="p-1 hover:text-slate-700"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="deleteMaterial('${item.id}')" class="p-1 hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      });
+
+      // 2. Vue PAR MATÉRIEL
+      const vMat = document.getElementById('viewMaterial');
+      vMat.innerHTML = '';
 
       const filteredMaterials = materials.filter(m => {
         const matchSearch = m.name.toLowerCase().includes(search) || m.holder.toLowerCase().includes(search) || (m.notes && m.notes.toLowerCase().includes(search));
@@ -266,67 +424,29 @@
         return matchSearch && matchCat;
       });
 
-      document.getElementById('matCount').innerText = materials.length;
-      document.getElementById('militantCount').innerText = militants.length;
-
-      if (filteredMaterials.length === 0) {
-        matContainer.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm bg-white rounded-xl border border-slate-200">Aucun matériel trouvé.</div>`;
-      } else {
-        filteredMaterials.forEach(m => {
-          matContainer.innerHTML += `
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between hover:border-slate-300 transition">
-              <div>
-                <div class="flex justify-between items-start mb-2">
-                  <h3 class="font-semibold text-slate-900 text-base">${m.name}</h3>
-                  <span class="bg-brand-50 text-brand-700 font-bold text-xs px-2.5 py-1 rounded-full border border-brand-100">x${m.quantity}</span>
-                </div>
-                <div class="inline-block bg-slate-100 text-slate-600 text-xs px-2 py-0.5 rounded font-medium mb-3">${m.category}</div>
-                <div class="text-xs text-slate-500 flex items-center gap-1.5 mb-1">
-                  <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i> Chez : <strong class="text-slate-700">${m.holder}</strong>
-                </div>
-                ${m.notes ? `<div class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100 mt-2">${m.notes}</div>` : ''}
+      filteredMaterials.forEach(m => {
+        const colors = categoryColors[m.category.toUpperCase()] || { bg: "bg-slate-100", text: "text-slate-700" };
+        vMat.innerHTML += `
+          <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-start mb-2">
+                <span class="${colors.bg} ${colors.text} text-xs font-bold px-2.5 py-0.5 rounded-md">${m.category}</span>
+                <span class="font-extrabold text-slate-900 text-base">x${m.quantity}</span>
               </div>
-              <div class="flex justify-end gap-1 border-t border-slate-100 pt-3 mt-3">
-                <button onclick="editMaterial('${m.id}')" class="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-50 transition">
-                  <i data-lucide="edit-3" class="w-4 h-4"></i>
-                </button>
-                <button onclick="deleteMaterial('${m.id}')" class="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-50 transition">
-                  <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
+              <h3 class="font-bold text-slate-900 text-sm mb-2">${m.name}</h3>
+              <div class="text-xs text-slate-600 flex items-center gap-1.5 mb-1 bg-slate-50 p-2 rounded-lg">
+                <i data-lucide="user" class="w-3.5 h-3.5 text-rose-600"></i> Chez : <strong class="text-slate-800">${m.holder}</strong>
               </div>
+              ${m.notes ? `<div class="text-xs text-slate-500 italic mt-2">${m.notes}</div>` : ''}
             </div>
-          `;
-        });
-      }
-
-      // Militants View
-      const milContainer = document.getElementById('view-militants');
-      milContainer.innerHTML = '';
-
-      militants.forEach(militant => {
-        const itemsHold = materials.filter(m => m.holder === militant.name);
-        milContainer.innerHTML += `
-          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-            <div class="flex justify-between items-start mb-3">
-              <div>
-                <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                  ${militant.name}
-                  ${militant.city ? `<span class="text-xs font-normal bg-slate-100 text-slate-600 px-2 py-0.5 rounded">${militant.city}</span>` : ''}
-                </h3>
-                ${militant.phone ? `<a href="tel:${militant.phone}" class="text-xs text-brand-600 hover:underline flex items-center gap-1 mt-0.5"><i data-lucide="phone" class="w-3 h-3"></i> ${militant.phone}</a>` : ''}
+            <div class="flex justify-between items-center border-t border-slate-100 pt-3 mt-3">
+              <button onclick="openTransferModal('${m.id}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i> Transférer
+              </button>
+              <div class="flex gap-1 text-slate-400">
+                <button onclick="editMaterial('${m.id}')" class="p-1 hover:text-slate-700"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                <button onclick="deleteMaterial('${m.id}')" class="p-1 hover:text-rose-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
               </div>
-              <span class="text-xs bg-slate-100 text-slate-700 font-semibold px-2.5 py-1 rounded-full border border-slate-200">
-                ${itemsHold.reduce((acc, curr) => acc + Number(curr.quantity), 0)} élément(s)
-              </span>
-            </div>
-            <div class="border-t border-slate-100 pt-2 space-y-1.5">
-              ${itemsHold.length === 0 ? '<div class="text-xs text-slate-400 italic">Aucun matériel attribué.</div>' : ''}
-              ${itemsHold.map(item => `
-                <div class="text-xs bg-slate-50 p-2.5 rounded-lg border border-slate-100 flex justify-between items-center">
-                  <span><strong class="text-slate-800">${item.name}</strong> (x${item.quantity})</span>
-                  <button onclick="editMaterial('${item.id}')" class="text-brand-600 hover:underline text-[11px] font-medium">Transférer</button>
-                </div>
-              `).join('')}
             </div>
           </div>
         `;
@@ -337,140 +457,202 @@
       lucide.createIcons();
     }
 
+    // TOP STATS CARDS BAR
+    function renderStatsBar() {
+      const bar = document.getElementById('statsBar');
+      bar.innerHTML = '';
+
+      categories.forEach(cat => {
+        const total = materials
+          .filter(m => m.category.toLowerCase() === cat.toLowerCase())
+          .reduce((sum, item) => sum + Number(item.quantity), 0);
+
+        bar.innerHTML += `
+          <div class="bg-white p-3 rounded-2xl shadow-2xs border border-slate-200/80 text-center flex flex-col justify-center">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">${cat}</div>
+            <div class="text-xl font-black text-slate-900">${total}</div>
+          </div>
+        `;
+      });
+    }
+
     function updateSelectOptions() {
       const catSelect = document.getElementById('matCategory');
       const catFilter = document.getElementById('categoryFilter');
       const holderSelect = document.getElementById('matHolder');
 
-      const currentCatFilter = catFilter.value;
+      const currentFilter = catFilter.value;
       catFilter.innerHTML = '<option value="ALL">Toutes les catégories</option>';
       categories.forEach(c => {
         catFilter.innerHTML += `<option value="${c}">${c}</option>`;
       });
-      catFilter.value = currentCatFilter;
+      catFilter.value = currentFilter;
 
       catSelect.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
       holderSelect.innerHTML = militants.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
     }
 
-    function openAddMaterialModal() {
-      document.getElementById('materialModalTitle').innerText = "Ajouter du matériel";
+    // ACTIONS MATERIAL
+    function openAddMaterialModal(defaultHolder = "") {
+      document.getElementById('materialModalTitle').innerText = "Attribuer du matériel";
       document.getElementById('matId').value = "";
       document.getElementById('materialForm').reset();
+      if (defaultHolder) {
+        document.getElementById('matHolder').value = defaultHolder;
+      }
       openModal('materialModal');
     }
 
     function saveMaterial(e) {
       e.preventDefault();
       const id = document.getElementById('matId').value || 'mat_' + Date.now();
-      const name = document.getElementById('matName').value;
-      const category = document.getElementById('matCategory').value;
-      const quantity = document.getElementById('matQuantity').value;
       const holder = document.getElementById('matHolder').value;
-      const notes = document.getElementById('matNotes').value;
+      const category = document.getElementById('matCategory').value;
+      const name = document.getElementById('matName').value.trim();
+      const quantity = document.getElementById('matQuantity').value;
+      const notes = document.getElementById('matNotes').value.trim();
 
-      const existingIndex = materials.findIndex(m => m.id === id);
-      const newMat = { id, name, category, quantity, holder, notes };
+      const idx = materials.findIndex(m => m.id === id);
+      const newMat = { id, holder, category, name, quantity, notes };
 
-      if (existingIndex >= 0) {
-        materials[existingIndex] = newMat;
-      } else {
-        materials.push(newMat);
-      }
+      if (idx >= 0) materials[idx] = newMat;
+      else materials.push(newMat);
 
-      syncToFirebase();
+      sync();
       closeModal('materialModal');
     }
 
     function editMaterial(id) {
       const m = materials.find(item => item.id === id);
       if (!m) return;
-
       document.getElementById('materialModalTitle').innerText = "Modifier le matériel";
       document.getElementById('matId').value = m.id;
-      document.getElementById('matName').value = m.name;
-      document.getElementById('matCategory').value = m.category;
-      document.getElementById('matQuantity').value = m.quantity;
       document.getElementById('matHolder').value = m.holder;
-      document.getElementById('matNotes').value = m.notes || '';
-
+      document.getElementById('matCategory').value = m.category;
+      document.getElementById('matName').value = m.name;
+      document.getElementById('matQuantity').value = m.quantity;
+      document.getElementById('matNotes').value = m.notes || "";
       openModal('materialModal');
     }
 
     function deleteMaterial(id) {
-      if (confirm("Supprimer cet élément du matériel ?")) {
+      if (confirm("Supprimer cet élément ?")) {
         materials = materials.filter(m => m.id !== id);
-        syncToFirebase();
+        sync();
       }
     }
 
-    // Gestion des catégories / Types de matériel (Ajout + Édition/Renommage)
+    // TRANSFERT
+    function openTransferModal(matId) {
+      const item = materials.find(m => m.id === matId);
+      if (!item) return;
+
+      document.getElementById('transferMatId').value = matId;
+      document.getElementById('transferItemDetails').innerHTML = `
+        <strong>${item.name}</strong> (x${item.quantity})<br>
+        Actuellement chez : <span class="font-bold text-rose-600">${item.holder}</span>
+      `;
+
+      const select = document.getElementById('transferNewHolder');
+      select.innerHTML = militants
+        .filter(m => m.name !== item.holder)
+        .map(m => `<option value="${m.name}">${m.name}</option>`)
+        .join('');
+
+      openModal('transferModal');
+    }
+
+    function executeTransfer(e) {
+      e.preventDefault();
+      const matId = document.getElementById('transferMatId').value;
+      const newHolder = document.getElementById('transferNewHolder').value;
+
+      const item = materials.find(m => m.id === matId);
+      if (item) {
+        item.holder = newHolder;
+        sync();
+      }
+      closeModal('transferModal');
+    }
+
+    // CATEGORIES (TYPES DE MATÉRIEL)
     function addCategory(e) {
       e.preventDefault();
-      const name = document.getElementById('newCategoryName').value.trim();
-      if (name && !categories.includes(name)) {
-        categories.push(name);
-        syncToFirebase();
-        document.getElementById('newCategoryName').value = '';
+      const val = document.getElementById('newCategoryInput').value.trim();
+      if (val && !categories.includes(val)) {
+        categories.push(val);
+        sync();
+        document.getElementById('newCategoryInput').value = '';
       }
     }
 
-    function editCategory(oldName) {
+    function editCategoryName(oldName) {
       const newName = prompt("Nouveau nom pour ce type de matériel :", oldName);
       if (newName && newName.trim() !== "" && newName !== oldName) {
         const trimmed = newName.trim();
         const index = categories.indexOf(oldName);
         if (index !== -1) {
           categories[index] = trimmed;
-          // Mettre à jour tout le matériel associé
           materials.forEach(m => {
-            if (m.category === oldName) m.category = trimmed;
+            if (m.category.toLowerCase() === oldName.toLowerCase()) {
+              m.category = trimmed;
+            }
           });
-          syncToFirebase();
+          sync();
         }
       }
     }
 
     function deleteCategory(catName) {
-      if (materials.some(m => m.category === catName)) {
-        alert("Impossible de supprimer cette catégorie car du matériel y est associé !");
+      if (materials.some(m => m.category.toLowerCase() === catName.toLowerCase())) {
+        alert("Impossible de supprimer ce type car du matériel y est rattaché !");
         return;
       }
       categories = categories.filter(c => c !== catName);
-      syncToFirebase();
+      sync();
     }
 
     function renderCategoriesList() {
       const list = document.getElementById('categoriesList');
       list.innerHTML = categories.map(c => `
-        <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg text-sm border border-slate-100">
-          <span class="font-medium text-slate-700">${c}</span>
+        <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
+          <span class="font-bold text-slate-800">${c}</span>
           <div class="flex items-center gap-1">
-            <button onclick="editCategory('${c}')" class="p-1 text-slate-400 hover:text-blue-600 rounded">
-              <i data-lucide="edit-2" class="w-4 h-4"></i>
+            <button onclick="editCategoryName('${c}')" title="Éditer / Renommer" class="p-1 text-slate-400 hover:text-indigo-600 rounded">
+              <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
             </button>
-            <button onclick="deleteCategory('${c}')" class="p-1 text-slate-400 hover:text-red-600 rounded">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            <button onclick="deleteCategory('${c}')" title="Supprimer" class="p-1 text-slate-400 hover:text-rose-600 rounded">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           </div>
         </div>
       `).join('');
     }
 
-    // Gestion des militants
+    // MILITANTS
     function addMilitant(e) {
       e.preventDefault();
-      const name = document.getElementById('newMilitantName').value.trim();
-      const phone = document.getElementById('newMilitantPhone').value.trim();
-      const city = document.getElementById('newMilitantCity').value.trim();
+      const name = document.getElementById('newMilName').value.trim();
+      const phone = document.getElementById('newMilPhone').value.trim();
+      const role = document.getElementById('newMilRole').value.trim();
 
       if (name) {
-        militants.push({ id: 'm_' + Date.now(), name, phone, city });
-        syncToFirebase();
-        document.getElementById('newMilitantName').value = '';
-        document.getElementById('newMilitantPhone').value = '';
-        document.getElementById('newMilitantCity').value = '';
+        militants.push({ id: 'm_' + Date.now(), name, phone, role });
+        sync();
+        document.getElementById('newMilName').value = '';
+        document.getElementById('newMilPhone').value = '';
+        document.getElementById('newMilRole').value = '';
       }
+    }
+
+    function editMilitant(id) {
+      const m = militants.find(m => m.id === id);
+      if (!m) return;
+      const newPhone = prompt(`Téléphone pour ${m.name} :`, m.phone || "");
+      if (newPhone !== null) m.phone = newPhone.trim();
+      const newRole = prompt(`Rôle / Secteur pour ${m.name} :`, m.role || "");
+      if (newRole !== null) m.role = newRole.trim();
+      sync();
     }
 
     function deleteMilitant(id, name) {
@@ -479,24 +661,28 @@
         return;
       }
       militants = militants.filter(m => m.id !== id);
-      syncToFirebase();
+      sync();
     }
 
     function renderMilitantsList() {
       const list = document.getElementById('militantsList');
       list.innerHTML = militants.map(m => `
-        <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-lg text-sm border border-slate-100">
+        <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
           <div>
-            <div class="font-semibold text-slate-800">${m.name}</div>
-            <div class="text-xs text-slate-500">${m.phone || 'Pas de tél'} ${m.city ? '• ' + m.city : ''}</div>
+            <div class="font-bold text-slate-800">${m.name}</div>
+            <div class="text-slate-400 text-[11px]">${m.phone || 'Pas de tél'} ${m.role ? '• ' + m.role : ''}</div>
           </div>
-          ${m.name !== 'Stock Local / Réserve' ? `
-            <button onclick="deleteMilitant('${m.id}', '${m.name}')" class="p-1 text-slate-400 hover:text-red-600 rounded">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
-            </button>
-          ` : ''}
+          <button onclick="deleteMilitant('${m.id}', '${m.name}')" class="p-1 text-slate-400 hover:text-rose-600">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
         </div>
       `).join('');
+    }
+
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('categoryFilter').value = 'ALL';
+      renderApp();
     }
 
     function openModal(id) {
@@ -509,7 +695,9 @@
       document.getElementById(id).classList.remove('flex');
     }
 
+    // Init
     lucide.createIcons();
+    renderApp();
   </script>
 </body>
 </html>
