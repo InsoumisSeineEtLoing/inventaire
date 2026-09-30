@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<!-- Favicon classique pour les onglets PC & mobile -->
-<link rel="icon" type="image/png" sizes="32x32" href="app-icon.png">
+    <!-- Favicon classique pour les onglets PC & mobile -->
+    <link rel="icon" type="image/png" sizes="32x32" href="app-icon.png">
 
-<!-- Icône pour l'écran d'accueil iPhone / iPad (iOS) -->
-<link rel="apple-touch-icon" sizes="180x180" href="app-icon.png">
+    <!-- Icône pour l'écran d'accueil iPhone / iPad (iOS) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="app-icon.png">
 
-<!-- Couleur de la barre d'adresse sur mobile (assortie au violet) -->
-<meta name="theme-color" content="#6b00bd">
+    <!-- Couleur de la barre d'adresse sur mobile (assortie au violet) -->
+    <meta name="theme-color" content="#6b00bd">
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -74,11 +74,14 @@
         <!-- BARRE DE RECHERCHE ET ONGLETS -->
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             
-            <div class="flex bg-slate-100 p-1 rounded-lg w-full md:w-auto">
-                <button id="btn-view-militant" onclick="switchView('militant')" class="flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-2">
+            <div class="flex bg-slate-100 p-1 rounded-lg w-full md:w-auto overflow-x-auto">
+                <button id="btn-view-militant" onclick="switchView('militant')" class="flex-1 md:flex-none px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-2 whitespace-nowrap">
                     <i class="fa-solid fa-user-group text-slate-500"></i> Vue par Militant
                 </button>
-                <button id="btn-view-material" onclick="switchView('material')" class="flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2">
+                <button id="btn-view-sector" onclick="switchView('sector')" class="flex-1 md:flex-none px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-map-location-dot text-slate-500"></i> Vue par Secteur
+                </button>
+                <button id="btn-view-material" onclick="switchView('material')" class="flex-1 md:flex-none px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2 whitespace-nowrap">
                     <i class="fa-solid fa-boxes-stacked text-slate-500"></i> Vue par Matériel
                 </button>
             </div>
@@ -86,7 +89,7 @@
             <div class="flex flex-1 items-center gap-2 w-full md:w-auto max-w-xl">
                 <div class="relative flex-1">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                    <input type="text" id="search-input" oninput="renderApp()" placeholder="Rechercher un militant, téléphone, matériel..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition">
+                    <input type="text" id="search-input" oninput="renderApp()" placeholder="Rechercher un militant, téléphone, secteur..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition">
                 </div>
                 <select id="filter-category" onchange="renderApp()" class="py-2 px-3 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-slate-700">
                     <option value="">Toutes les catégories</option>
@@ -96,6 +99,7 @@
 
         <!-- CONTENU VUES -->
         <div id="militant-view" class="space-y-6"></div>
+        <div id="sector-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 hidden"></div>
         <div id="material-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden"></div>
 
     </main>
@@ -232,7 +236,7 @@
             return catColors[cat] || "bg-slate-100 text-slate-700 border-slate-200";
         }
 
-        // INITIALISATION ECOUTEURS TEMPS RÉEL (Direct & Instantané)
+        // INITIALISATION ÉCOUTEURS TEMPS RÉEL
         db.ref('categories').on('value', snap => {
             if (snap.exists()) {
                 appState.categories = snap.val();
@@ -257,19 +261,20 @@
         function switchView(view) {
             appState.currentView = view;
             const btnM = document.getElementById('btn-view-militant');
+            const btnS = document.getElementById('btn-view-sector');
             const btnMat = document.getElementById('btn-view-material');
             
-            if (view === 'militant') {
-                btnM.className = "flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-2";
-                btnMat.className = "flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2";
-                document.getElementById('militant-view').classList.remove('hidden');
-                document.getElementById('material-view').classList.add('hidden');
-            } else {
-                btnMat.className = "flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-2";
-                btnM.className = "flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2";
-                document.getElementById('militant-view').classList.add('hidden');
-                document.getElementById('material-view').classList.remove('hidden');
-            }
+            const activeClass = "flex-1 md:flex-none px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-2 whitespace-nowrap";
+            const inactiveClass = "flex-1 md:flex-none px-3 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2 whitespace-nowrap";
+
+            btnM.className = view === 'militant' ? activeClass : inactiveClass;
+            btnS.className = view === 'sector' ? activeClass : inactiveClass;
+            btnMat.className = view === 'material' ? activeClass : inactiveClass;
+
+            document.getElementById('militant-view').classList.toggle('hidden', view !== 'militant');
+            document.getElementById('sector-view').classList.toggle('hidden', view !== 'sector');
+            document.getElementById('material-view').classList.toggle('hidden', view !== 'material');
+
             renderApp();
         }
 
@@ -285,7 +290,6 @@
                 });
                 if (current && appState.categories.includes(current)) sel.value = current;
             });
-            renderCategoryList();
         }
 
         function renderApp() {
@@ -320,7 +324,6 @@
             // 2. VUE PAR MILITANT
             const militantView = document.getElementById('militant-view');
             militantView.innerHTML = '';
-
             const militantsList = Object.entries(appState.militants);
 
             if (militantsList.length === 0) {
@@ -417,7 +420,97 @@
                 `;
             });
 
-            // 3. VUE PAR MATÉRIEL (REGROUPEMENT PAR CATÉGORIE)
+            // 3. VUE PAR SECTEUR
+            const sectorView = document.getElementById('sector-view');
+            sectorView.innerHTML = '';
+
+            const sectorsMap = {};
+
+            Object.entries(appState.militants).forEach(([mId, mData]) => {
+                const sectorName = mData.sector && mData.sector.trim() !== '' ? mData.sector.trim() : 'Non assigné';
+                if (!sectorsMap[sectorName]) {
+                    sectorsMap[sectorName] = [];
+                }
+                sectorsMap[sectorName].push({ id: mId, ...mData });
+            });
+
+            let hasSectorData = false;
+
+            Object.entries(sectorsMap).forEach(([sectorName, militantsInSector]) => {
+                let sectorMilitantsHtml = '';
+                let totalSectorMatCount = 0;
+
+                militantsInSector.forEach(militant => {
+                    let mItems = Object.entries(appState.items)
+                        .filter(([iId, item]) => item.militantId === militant.id)
+                        .filter(([iId, item]) => !filterCat || item.category === filterCat);
+
+                    const matchSearch = sectorName.toLowerCase().includes(search) ||
+                                        militant.name.toLowerCase().includes(search) ||
+                                        (militant.phone && militant.phone.toLowerCase().includes(search)) ||
+                                        (militant.role && militant.role.toLowerCase().includes(search));
+
+                    if (search && !matchSearch && mItems.length === 0) return;
+
+                    totalSectorMatCount += mItems.reduce((acc, [i, item]) => acc + Number(item.quantity || 0), 0);
+
+                    let itemBadges = mItems.map(([iId, item]) => `
+                        <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded border ${getCatBadgeClass(item.category)}">
+                            ${item.title || item.category} (x${item.quantity})
+                        </span>
+                    `).join(' ');
+
+                    sectorMilitantsHtml += `
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-2 last:mb-0">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-800">${militant.name}</p>
+                                    ${militant.role ? `<p class="text-[10px] text-slate-500">${militant.role}</p>` : ''}
+                                </div>
+                                ${militant.phone ? `<a href="tel:${militant.phone}" class="text-[10px] bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-600 hover:text-pink-600"><i class="fa-solid fa-phone"></i></a>` : ''}
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-1">
+                                ${itemBadges || '<span class="text-[10px] text-slate-400 italic">Aucun matériel</span>'}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                if (sectorMilitantsHtml !== '') {
+                    hasSectorData = true;
+                    sectorView.innerHTML += `
+                        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+                                            <i class="fa-solid fa-map-pin text-xs"></i>
+                                        </div>
+                                        <h3 class="font-bold text-slate-800 text-sm">${sectorName}</h3>
+                                    </div>
+                                    <span class="text-xs font-extrabold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">
+                                        ${militantsInSector.length} militant(s)
+                                    </span>
+                                </div>
+                                <div class="space-y-2">
+                                    ${sectorMilitantsHtml}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (!hasSectorData) {
+                sectorView.innerHTML = `
+                    <div class="col-span-full bg-white rounded-xl p-8 text-center text-slate-400 border border-slate-200">
+                        <i class="fa-solid fa-map-location-dot text-4xl mb-2 text-slate-300"></i>
+                        <p class="text-sm font-medium">Aucun secteur ou militant trouvé.</p>
+                    </div>
+                `;
+            }
+
+            // 4. VUE PAR MATÉRIEL
             const materialView = document.getElementById('material-view');
             materialView.innerHTML = '';
 
@@ -508,17 +601,14 @@
             }
         }
 
-        // --- GESTION DES MODALES ET ACTIONS ---
-
+        // GESTION DES MODALES ET ACTIONS
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
         }
 
-        // MILITANTS
         function openMilitantModal(mId = null) {
             document.getElementById('militant-id').value = mId || '';
             document.getElementById('modal-militant-title').innerText = mId ? 'Modifier le militant' : 'Ajouter un militant';
-            
             if (mId && appState.militants[mId]) {
                 const m = appState.militants[mId];
                 document.getElementById('militant-name').value = m.name || '';
@@ -536,51 +626,36 @@
 
         function handleSaveMilitant(e) {
             e.preventDefault();
-            const id = document.getElementById('militant-id').value || db.ref('militants').push().key;
+            const mId = document.getElementById('militant-id').value;
             const data = {
-                name: document.getElementById('militant-name').value.trim(),
-                phone: document.getElementById('militant-phone').value.trim(),
-                sector: document.getElementById('militant-sector').value.trim(),
-                role: document.getElementById('militant-role').value.trim()
+                name: document.getElementById('militant-name').value,
+                phone: document.getElementById('militant-phone').value,
+                sector: document.getElementById('militant-sector').value,
+                role: document.getElementById('militant-role').value
             };
-
-            db.ref('militants/' + id).set(data, (error) => {
-                if (!error) closeModal('modal-militant');
-            });
+            if (mId) {
+                db.ref('militants/' + mId).update(data);
+            } else {
+                db.ref('militants').push(data);
+            }
+            closeModal('modal-militant');
         }
 
         function deleteMilitant(mId) {
-            if (confirm("Supprimer ce militant ? Le matériel associé ne sera pas supprimé mais devra être réattribué.")) {
+            if (confirm("Supprimer ce militant ? Le matériel associé sera conservé mais plus attribué.")) {
                 db.ref('militants/' + mId).remove();
             }
         }
 
-        // MATÉRIEL
-        function populateMilitantsDropdown(selectId) {
-            const sel = document.getElementById(selectId);
-            sel.innerHTML = '';
-            Object.entries(appState.militants).forEach(([mId, mData]) => {
-                sel.innerHTML += `<option value="${mId}">${mData.name}</option>`;
-            });
-        }
-
-        function openItemModal(iId = null) {
-            if (Object.keys(appState.militants).length === 0) {
-                alert("Veuillez d'abord ajouter au moins un militant.");
-                openMilitantModal();
-                return;
-            }
-
+        function openItemModal(itemId = null) {
             populateMilitantsDropdown('item-militant');
-            updateCategoryDropdowns();
-
-            document.getElementById('item-id').value = iId || '';
-            document.getElementById('modal-item-title').innerText = iId ? 'Modifier le matériel' : 'Attribuer du matériel';
-
-            if (iId && appState.items[iId]) {
-                const item = appState.items[iId];
-                document.getElementById('item-militant').value = item.militantId;
-                document.getElementById('item-category').value = item.category;
+            document.getElementById('item-id').value = itemId || '';
+            document.getElementById('modal-item-title').innerText = itemId ? 'Modifier la dotation' : 'Attribuer du matériel';
+            
+            if (itemId && appState.items[itemId]) {
+                const item = appState.items[itemId];
+                document.getElementById('item-militant').value = item.militantId || '';
+                document.getElementById('item-category').value = item.category || appState.categories[0];
                 document.getElementById('item-title').value = item.title || '';
                 document.getElementById('item-quantity').value = item.quantity || 1;
                 document.getElementById('item-details').value = item.details || '';
@@ -599,68 +674,70 @@
 
         function handleSaveItem(e) {
             e.preventDefault();
-            const id = document.getElementById('item-id').value || db.ref('items').push().key;
+            const itemId = document.getElementById('item-id').value;
             const data = {
                 militantId: document.getElementById('item-militant').value,
                 category: document.getElementById('item-category').value,
-                title: document.getElementById('item-title').value.trim(),
+                title: document.getElementById('item-title').value,
                 quantity: Number(document.getElementById('item-quantity').value),
-                details: document.getElementById('item-details').value.trim()
+                details: document.getElementById('item-details').value
             };
-
-            db.ref('items/' + id).set(data, (error) => {
-                if (!error) closeModal('modal-item');
-            });
+            if (itemId) {
+                db.ref('items/' + itemId).update(data);
+            } else {
+                db.ref('items').push(data);
+            }
+            closeModal('modal-item');
         }
 
-        function deleteItem(iId) {
-            if (confirm("Supprimer ce matériel de l'inventaire ?")) {
-                db.ref('items/' + iId).remove();
+        function deleteItem(itemId) {
+            if (confirm("Retirer cet élément d'inventaire ?")) {
+                db.ref('items/' + itemId).remove();
             }
         }
 
-        // TRANSFERT
-        function openTransferModal(iId) {
-            const item = appState.items[iId];
-            if (!item) return;
-
+        function openTransferModal(itemId) {
             populateMilitantsDropdown('transfer-militant');
-            document.getElementById('transfer-item-id').value = iId;
-            
-            const currentHolder = appState.militants[item.militantId] ? appState.militants[item.militantId].name : 'Inconnu';
-            document.getElementById('transfer-item-desc').innerText = `${item.category} (${item.title || 'Sans titre'}) x${item.quantity} - Actuellement chez ${currentHolder}`;
-
+            const item = appState.items[itemId];
+            if (!item) return;
+            document.getElementById('transfer-item-id').value = itemId;
+            document.getElementById('transfer-item-desc').innerText = `${item.title || item.category} (x${item.quantity})`;
+            document.getElementById('transfer-militant').value = item.militantId || '';
             document.getElementById('modal-transfer').classList.remove('hidden');
         }
 
         function handleSaveTransfer(e) {
             e.preventDefault();
-            const iId = document.getElementById('transfer-item-id').value;
+            const itemId = document.getElementById('transfer-item-id').value;
             const newMilitantId = document.getElementById('transfer-militant').value;
+            if (itemId && newMilitantId) {
+                db.ref('items/' + itemId).update({ militantId: newMilitantId });
+            }
+            closeModal('modal-transfer');
+        }
 
-            db.ref(`items/${iId}/militantId`).set(newMilitantId, (error) => {
-                if (!error) closeModal('modal-transfer');
+        function populateMilitantsDropdown(selectId) {
+            const sel = document.getElementById(selectId);
+            sel.innerHTML = '';
+            Object.entries(appState.militants).forEach(([id, m]) => {
+                sel.innerHTML += `<option value="${id}">${m.name} ${m.sector ? '(' + m.sector + ')' : ''}</option>`;
             });
         }
 
-        // CATÉGORIES
         function openCategoryModal() {
             renderCategoryList();
             document.getElementById('modal-categories').classList.remove('hidden');
         }
 
         function renderCategoryList() {
-            const list = document.getElementById('categories-list');
-            if (!list) return;
-            list.innerHTML = '';
-            appState.categories.forEach((cat, index) => {
-                list.innerHTML += `
-                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
-                        <span class="font-bold text-slate-700">${cat}</span>
-                        <div class="flex items-center gap-2">
-                            <button onclick="renameCategory(${index})" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-pen"></i></button>
-                            <button onclick="deleteCategory(${index})" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash-can"></i></button>
-                        </div>
+            const container = document.getElementById('categories-list');
+            if (!container) return;
+            container.innerHTML = '';
+            appState.categories.forEach((cat, idx) => {
+                container.innerHTML += `
+                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-200">
+                        <span class="text-xs font-semibold text-slate-700">${cat}</span>
+                        <button onclick="removeCategory(${idx})" class="text-slate-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                 `;
             });
@@ -669,50 +746,27 @@
         function handleAddCategory(e) {
             e.preventDefault();
             const input = document.getElementById('new-cat-name');
-            const name = input.value.trim();
-            if (name && !appState.categories.includes(name)) {
-                appState.categories.push(name);
+            const newCat = input.value.trim();
+            if (newCat && !appState.categories.includes(newCat)) {
+                appState.categories.push(newCat);
                 db.ref('categories').set(appState.categories);
                 input.value = '';
             }
         }
 
-        function renameCategory(index) {
-            const oldName = appState.categories[index];
-            const newName = prompt("Nouveau nom pour la catégorie :", oldName);
-            if (newName && newName.trim() && newName !== oldName) {
-                appState.categories[index] = newName.trim();
-                db.ref('categories').set(appState.categories);
-
-                Object.entries(appState.items).forEach(([iId, item]) => {
-                    if (item.category === oldName) {
-                        db.ref(`items/${iId}/category`).set(newName.trim());
-                    }
-                });
-            }
-        }
-
-        function deleteCategory(index) {
-            const cat = appState.categories[index];
-            if (confirm(`Supprimer la catégorie "${cat}" ?`)) {
-                appState.categories.splice(index, 1);
+        function removeCategory(idx) {
+            if (confirm("Supprimer cette catégorie ?")) {
+                appState.categories.splice(idx, 1);
                 db.ref('categories').set(appState.categories);
             }
         }
 
-        // SAUVEGARDE / EXPORT DATA
         function exportData() {
-            const data = {
-                militants: appState.militants,
-                items: appState.items,
-                categories: appState.categories
-            };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `sauvegarde-matos-militant-${new Date().toISOString().slice(0,10)}.json`;
-            a.click();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `sauvegarde_inventaire_${new Date().toISOString().slice(0,10)}.json`);
+            dlAnchorElem.click();
         }
     </script>
 </body>
