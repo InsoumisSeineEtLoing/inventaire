@@ -12,7 +12,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matos Militant - Inventaire</title>
+    <title>Matos Militant - Gestion d'équipe & Inventaire</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -42,8 +42,8 @@
                     <i class="fa-solid fa-users-gear text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight">Matériel Militant</h1>
-                    <p class="text-xs text-slate-400">Qui a quoi ?</p>
+                    <h1 class="text-xl font-bold tracking-tight">Matos Militant</h1>
+                    <p class="text-xs text-slate-400">Qui a quoi ? & Gestion d'équipe</p>
                 </div>
             </div>
 
@@ -283,6 +283,20 @@
             renderApp();
         }
 
+        // Fonction pour basculer vers la vue par militant et cibler un militant précis
+        function focusMilitant(mId) {
+            switchView('militant');
+            setTimeout(() => {
+                const el = document.getElementById(`militant-card-${mId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Petit effet visuel flash de surbrillance
+                    el.classList.add('ring-4', 'ring-pink-400');
+                    setTimeout(() => el.classList.remove('ring-4', 'ring-pink-400'), 1500);
+                }
+            }, 50);
+        }
+
         function updateCategoryDropdowns() {
             const selects = [document.getElementById('filter-category'), document.getElementById('item-category')];
             selects.forEach(sel => {
@@ -419,7 +433,7 @@
                 }
 
                 militantView.innerHTML += `
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div id="militant-card-${mId}" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300">
                         <div class="bg-[#0f172a] text-white px-5 py-3 flex justify-between items-center">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-full bg-pink-600 flex items-center justify-center font-bold text-xs uppercase text-white shadow">
@@ -477,9 +491,10 @@
 
                     totalSectorMatCount += mItems.reduce((acc, [i, item]) => acc + Number(item.quantity || 0), 0);
 
+                    // Utilisation de la catégorie (et non du titre) pour les badges de la vue par secteur
                     let itemBadges = mItems.map(([iId, item]) => `
                         <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded border ${getCatBadgeClass(item.category)}">
-                            ${item.title || item.category} (x${item.quantity})
+                            ${item.category} (x${item.quantity})
                         </span>
                     `).join(' ');
 
@@ -487,8 +502,10 @@
                         <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-2 last:mb-0">
                             <div class="flex justify-between items-start">
                                 <div>
-                                    <p class="text-xs font-bold text-slate-800">${militant.name}</p>
-                                    ${militant.role ? `<p class="text-[10px] text-slate-500">${militant.role}</p>` : ''}
+                                    <button onclick="focusMilitant('${militant.id}')" class="text-xs font-bold text-slate-800 hover:text-pink-600 hover:underline text-left transition flex items-center gap-1">
+                                        <i class="fa-solid fa-circle-user text-slate-400 text-[10px]"></i> ${militant.name}
+                                    </button>
+                                    ${militant.role ? `<p class="text-[10px] text-slate-500 mt-0.5">${militant.role}</p>` : ''}
                                 </div>
                                 ${militant.phone ? `<a href="tel:${militant.phone}" class="text-[10px] bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-600 hover:text-pink-600"><i class="fa-solid fa-phone"></i></a>` : ''}
                             </div>
@@ -742,8 +759,6 @@
         function populateMilitantsDropdown(selectId) {
             const sel = document.getElementById(selectId);
             sel.innerHTML = '';
-            
-            // On trie aussi les militants par ordre alphabétique dans les listes déroulantes pour plus de clarté
             let sortedMilitants = Object.entries(appState.militants).sort((a, b) => a[1].name.localeCompare(b[1].name));
 
             sortedMilitants.forEach(([id, m]) => {
