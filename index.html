@@ -1,703 +1,730 @@
 <!DOCTYPE html>
-<html lang="fr" class="h-full bg-slate-100">
+<html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Matos Militant - Qui a quoi ? & Gestion d'équipe</title>
-  
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
-    body { font-family: 'Inter', sans-serif; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matos Militant - Gestion d'équipe & Inventaire</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Firebase Compat SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal-bg { background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); }
+    </style>
 </head>
-<body class="h-full text-slate-800 flex flex-col antialiased bg-slate-100 min-h-screen">
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-16">
 
-  <!-- Top Dark Header -->
-  <header class="bg-[#0f172a] text-white sticky top-0 z-30 shadow-md">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16">
-        
-        <!-- Logo & Title -->
-        <div class="flex items-center space-x-3">
-          <div class="p-2.5 bg-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-rose-900/30">
-            <i data-lucide="users" class="w-6 h-6 text-white"></i>
-          </div>
-          <div>
-            <h1 class="text-xl font-extrabold leading-none tracking-tight text-white">Matos Militant</h1>
-            <p class="text-xs text-slate-400 mt-1 font-medium">Qui a quoi ? &amp; Gestion d'équipe</p>
-          </div>
-        </div>
-
-        <!-- Right Header Actions -->
-        <div class="flex items-center space-x-3">
-          <button onclick="openModal('categoriesModal')" title="Gérer les types de matériel" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700">
-            <i data-lucide="tags" class="w-4 h-4 text-rose-500"></i>
-            <span class="hidden sm:inline">Types</span>
-          </button>
-
-          <button onclick="openModal('militantsModal')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition border border-slate-700 shadow-sm">
-            <i data-lucide="user-check" class="w-4 h-4 text-rose-400"></i>
-            <span>Militants (<span id="militantsHeaderCount">0</span>)</span>
-          </button>
-
-          <button onclick="openAddMaterialModal()" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition shadow-lg shadow-rose-900/40">
-            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-            <span>+ Attribuer</span>
-          </button>
-        </div>
-
-      </div>
-    </div>
-  </header>
-
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-1 w-full space-y-6">
-
-    <!-- Top Summary Stat Cards Bar -->
-    <div id="statsBar" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3">
-      <!-- Dynamic Stat Cards inserted via JS -->
-    </div>
-
-    <!-- Filter Bar & View Toggle -->
-    <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row gap-3 items-center justify-between">
-      
-      <!-- Toggle Tabs -->
-      <div class="bg-slate-100 p-1 rounded-xl flex w-full md:w-auto">
-        <button id="btnTabMilitants" onclick="setTab('militants')" class="flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition text-slate-900 bg-white shadow-sm flex items-center justify-center gap-2">
-          <i data-lucide="user" class="w-3.5 h-3.5"></i>
-          <span>Vue par Militant</span>
-        </button>
-        <button id="btnTabMaterial" onclick="setTab('material')" class="flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2">
-          <i data-lucide="box" class="w-3.5 h-3.5"></i>
-          <span>Vue par Matériel</span>
-        </button>
-      </div>
-
-      <!-- Search & Category Filters -->
-      <div class="flex items-center gap-2 w-full md:w-auto flex-1">
-        <div class="relative flex-1">
-          <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-slate-400"></i>
-          <input type="text" id="searchInput" oninput="renderApp()" placeholder="Rechercher un militant, téléphone, matériel..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-500/50 focus:bg-white transition">
-        </div>
-
-        <select id="categoryFilter" onchange="renderApp()" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500/50 bg-white">
-          <option value="ALL">Toutes les catégories</option>
-        </select>
-
-        <button onclick="resetFilters()" title="Réinitialiser" class="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 transition">
-          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-    </div>
-
-    <!-- MAIN VIEW 1: Vue par Militant -->
-    <div id="viewMilitants" class="space-y-5"></div>
-
-    <!-- MAIN VIEW 2: Vue par Matériel -->
-    <div id="viewMaterial" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-
-  </main>
-
-  <!-- MODAL 1: Attribuer / Ajouter du Matos -->
-  <div id="materialModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative border border-slate-100">
-      <button onclick="closeModal('materialModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-      
-      <h2 id="materialModalTitle" class="text-base font-extrabold text-slate-900 mb-4 flex items-center gap-2">
-        <i data-lucide="plus-circle" class="w-5 h-5 text-rose-600"></i> Attribuer du matériel
-      </h2>
-
-      <form id="materialForm" onsubmit="saveMaterial(event)" class="space-y-4">
-        <input type="hidden" id="matId">
-        
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Militant destinataire</label>
-          <select id="matHolder" required class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-rose-500 outline-none bg-slate-50"></select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Type de matériel</label>
-          <select id="matCategory" required class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-rose-500 outline-none bg-slate-50"></select>
-        </div>
-
-        <div class="grid grid-cols-3 gap-3">
-          <div class="col-span-2">
-            <label class="block text-xs font-bold text-slate-700 mb-1">Intitulé du matériel</label>
-            <input type="text" id="matName" required placeholder="ex: Format A2 - Rassemblement" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-rose-500 outline-none">
-          </div>
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1">Quantité</label>
-            <input type="number" id="matQuantity" min="1" value="1" required class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-bold focus:ring-2 focus:ring-rose-500 outline-none text-center">
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Emplacement / Détail</label>
-          <input type="text" id="matNotes" placeholder="ex: Coffre voiture, Dans son sac à dos, Chez elle..." class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-rose-500 outline-none">
-        </div>
-
-        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
-          <button type="button" onclick="closeModal('materialModal')" class="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">Annuler</button>
-          <button type="submit" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold shadow-md transition">Enregistrer</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL 2: Transferer du Matos -->
-  <div id="transferModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl relative">
-      <button onclick="closeModal('transferModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-      
-      <h2 class="text-base font-extrabold text-slate-900 mb-3 flex items-center gap-2">
-        <i data-lucide="arrow-left-right" class="w-5 h-5 text-indigo-600"></i> Transférer du matériel
-      </h2>
-
-      <div id="transferItemDetails" class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4 text-xs"></div>
-
-      <form onsubmit="executeTransfer(event)" class="space-y-4">
-        <input type="hidden" id="transferMatId">
-        <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">Nouveau détenteur (Camarade)</label>
-          <select id="transferNewHolder" required class="w-full border border-slate-200 rounded-xl p-2.5 text-xs font-semibold focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></select>
-        </div>
-
-        <div class="flex justify-end gap-2 pt-2">
-          <button type="button" onclick="closeModal('transferModal')" class="px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50">Annuler</button>
-          <button type="submit" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-md transition">Confirmer le transfert</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- MODAL 3: Gérer / Éditer les Types de Matériel -->
-  <div id="categoriesModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto">
-      <button onclick="closeModal('categoriesModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-      
-      <h2 class="text-base font-extrabold text-slate-900 mb-4 flex items-center gap-2">
-        <i data-lucide="tags" class="w-5 h-5 text-rose-600"></i> Types de matériel
-      </h2>
-
-      <!-- Form Ajout Catégorie -->
-      <form onsubmit="addCategory(event)" class="flex gap-2 mb-4">
-        <input type="text" id="newCategoryInput" placeholder="Nouveau type (ex: Megaphone)" required class="flex-1 border border-slate-200 rounded-xl p-2.5 text-xs font-medium outline-none focus:ring-2 focus:ring-rose-500">
-        <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1 transition">
-          <i data-lucide="plus" class="w-4 h-4"></i> Ajouter
-        </button>
-      </form>
-
-      <div id="categoriesList" class="space-y-2 border-t border-slate-100 pt-3"></div>
-    </div>
-  </div>
-
-  <!-- MODAL 4: Gérer les Militants -->
-  <div id="militantsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto">
-      <button onclick="closeModal('militantsModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1">
-        <i data-lucide="x" class="w-5 h-5"></i>
-      </button>
-      
-      <h2 class="text-base font-extrabold text-slate-900 mb-4 flex items-center gap-2">
-        <i data-lucide="users" class="w-5 h-5 text-rose-600"></i> Liste des militants
-      </h2>
-
-      <!-- Form Ajout Militant -->
-      <form onsubmit="addMilitant(event)" class="space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-4">
-        <div class="text-xs font-extrabold text-slate-700">Ajouter un camarade</div>
-        <input type="text" id="newMilName" placeholder="Nom Prénom (ex: Thomas L.) *" required class="w-full border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none focus:ring-2 focus:ring-rose-500">
-        <div class="grid grid-cols-2 gap-2">
-          <input type="tel" id="newMilPhone" placeholder="Téléphone (ex: 06 11 22 33 44)" class="border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none">
-          <input type="text" id="newMilRole" placeholder="Secteur / Rôle (ex: Secteur Nord)" class="border border-slate-200 rounded-lg p-2 text-xs font-medium outline-none">
-        </div>
-        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white py-2 rounded-lg text-xs font-bold transition">
-          Enregistrer le militant
-        </button>
-      </form>
-
-      <div id="militantsList" class="space-y-2 border-t border-slate-100 pt-3"></div>
-    </div>
-  </div>
-
-  <script>
-    // Configuration Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyC1IBbYeNVdTXkpeS24HSagh9JXvOO3km4",
-      authDomain: "inventaire-militant.firebaseapp.com",
-      databaseURL: "https://inventaire-militant-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "inventaire-militant",
-      storageBucket: "inventaire-militant.firebasestorage.app",
-      messagingSenderId: "20668659395",
-      appId: "1:20668659395:web:a4b50d2e1f4929e409d476",
-      measurementId: "G-BQ0ZEVDQBV"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // Palette de couleurs pour les badges
-    const categoryColors = {
-      "TRACTS": { bg: "bg-blue-100", text: "text-blue-700" },
-      "AFFICHES": { bg: "bg-purple-100", text: "text-purple-700" },
-      "COLLE": { bg: "bg-amber-100", text: "text-amber-800" },
-      "BARNUM": { bg: "bg-emerald-100", text: "text-emerald-700" },
-      "TABLES": { bg: "bg-indigo-100", text: "text-indigo-700" },
-      "ENCEINTE": { bg: "bg-rose-100", text: "text-rose-700" },
-      "MICRO": { bg: "bg-cyan-100", text: "text-cyan-700" }
-    };
-
-    // Application State
-    let activeTab = 'militants';
-    let categories = ["Affiches", "Colle", "Tracts", "Barnum", "Tables", "Enceinte", "Micro"];
-    let militants = [
-      { id: 'm1', name: 'Thomas L.', phone: '06 11 22 33 44', role: 'Secteur Nord' },
-      { id: 'm2', name: 'Sarah K.', phone: '06 22 33 44 55', role: 'Référente tracts' }
-    ];
-    let materials = [
-      { id: 'mat1', name: 'Tracts A5 Mobilisation', category: 'Tracts', quantity: 1500, holder: 'Thomas L.', notes: 'Dans son sac à dos' },
-      { id: 'mat2', name: 'Format A2 - Rassemblement', category: 'Affiches', quantity: 100, holder: 'Thomas L.', notes: 'Coffre voiture' },
-      { id: 'mat3', name: 'Tracts A5 Mobilisation', category: 'Tracts', quantity: 3000, holder: 'Sarah K.', notes: 'Chez elle' },
-      { id: 'mat4', name: 'Seaux de 5kg prêt à l\'emploi', category: 'Colle', quantity: 2, holder: 'Sarah K.', notes: 'Garage' }
-    ];
-
-    // Synchro Realtime Firebase
-    db.ref('matos_militant').on('value', (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        if (data.categories) categories = data.categories;
-        if (data.militants) militants = Array.isArray(data.militants) ? data.militants : Object.values(data.militants);
-        if (data.materials) materials = Array.isArray(data.materials) ? data.materials : Object.values(data.materials);
-      }
-      renderApp();
-    });
-
-    function sync() {
-      db.ref('matos_militant').set({
-        categories,
-        militants,
-        materials
-      });
-    }
-
-    function setTab(tab) {
-      activeTab = tab;
-      const bMil = document.getElementById('btnTabMilitants');
-      const bMat = document.getElementById('btnTabMaterial');
-      const vMil = document.getElementById('viewMilitants');
-      const vMat = document.getElementById('viewMaterial');
-
-      if (tab === 'militants') {
-        bMil.className = "flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition text-slate-900 bg-white shadow-sm flex items-center justify-center gap-2";
-        bMat.className = "flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2";
-        vMil.classList.remove('hidden');
-        vMat.classList.add('hidden');
-      } else {
-        bMat.className = "flex-1 md:flex-none px-4 py-2 text-xs font-bold rounded-lg transition text-slate-900 bg-white shadow-sm flex items-center justify-center gap-2";
-        bMil.className = "flex-1 md:flex-none px-4 py-2 text-xs font-semibold rounded-lg transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2";
-        vMat.classList.remove('hidden');
-        vMil.classList.add('hidden');
-      }
-    }
-
-    function renderApp() {
-      document.getElementById('militantsHeaderCount').innerText = militants.length;
-      updateSelectOptions();
-      renderStatsBar();
-
-      const search = document.getElementById('searchInput').value.toLowerCase();
-      const catFilter = document.getElementById('categoryFilter').value;
-
-      // 1. Vue PAR MILITANT
-      const vMil = document.getElementById('viewMilitants');
-      vMil.innerHTML = '';
-
-      militants.forEach(militant => {
-        const milItems = materials.filter(m => {
-          const isHolder = m.holder === militant.name;
-          const matchSearch = militant.name.toLowerCase().includes(search) ||
-                              (militant.phone && militant.phone.includes(search)) ||
-                              m.name.toLowerCase().includes(search) ||
-                              (m.notes && m.notes.toLowerCase().includes(search));
-          const matchCat = catFilter === 'ALL' || m.category === catFilter;
-          return isHolder && matchSearch && matchCat;
-        });
-
-        // Si recherche active et aucun résultat pour ce militant, masquer le militant
-        if (search && milItems.length === 0 && !militant.name.toLowerCase().includes(search)) {
-          return;
-        }
-
-        const initial = militant.name.charAt(0).toUpperCase();
-
-        vMil.innerHTML += `
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-200/90 overflow-hidden">
-            <!-- Militant Dark Header -->
-            <div class="bg-[#0f172a] text-white px-5 py-3.5 flex items-center justify-between">
-              <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 rounded-full bg-rose-600 text-white font-extrabold text-sm flex items-center justify-center shadow-inner">
-                  ${initial}
+    <!-- HEADER TOP -->
+    <header class="bg-[#0f172a] text-white py-4 px-4 sm:px-8 shadow-md">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-pink-600 p-2.5 rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <i class="fa-solid fa-users-gear text-xl"></i>
                 </div>
                 <div>
-                  <div class="flex items-center gap-2">
-                    <h3 class="font-bold text-sm tracking-tight text-white">${militant.name}</h3>
-                    <button onclick="editMilitant('${militant.id}')" class="text-slate-400 hover:text-white p-0.5">
-                      <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-                    </button>
-                  </div>
-                  <div class="text-[11px] text-slate-400 flex items-center gap-2 font-medium">
-                    ${militant.phone ? `<span class="flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3"></i> ${militant.phone}</span>` : ''}
-                    ${militant.role ? `<span>• ${militant.role}</span>` : ''}
-                  </div>
+                    <h1 class="text-xl font-bold tracking-tight">Matos Militant</h1>
+                    <p class="text-xs text-slate-400">Qui a quoi ? & Gestion d'équipe</p>
                 </div>
-              </div>
-
-              <button onclick="openAddMaterialModal('${militant.name}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition border border-slate-700">
-                <i data-lucide="plus" class="w-3.5 h-3.5 text-rose-400"></i>
-                <span>Ajouter du matos</span>
-              </button>
             </div>
 
-            <!-- Items Grid Owned by Militant -->
-            <div class="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 bg-slate-50/50">
-              ${milItems.length === 0 ? '<div class="col-span-full py-4 text-center text-xs text-slate-400 italic">Aucun matériel attribué.</div>' : ''}
-              ${milItems.map(item => {
-                const colors = categoryColors[item.category.toUpperCase()] || { bg: "bg-slate-100", text: "text-slate-700" };
-                return `
-                  <div class="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs flex flex-col justify-between hover:border-slate-300 transition">
-                    <div>
-                      <div class="flex justify-between items-start mb-2">
-                        <span class="${colors.bg} ${colors.text} text-[11px] font-bold px-2.5 py-0.5 rounded-md">
-                          ${item.category}
-                        </span>
-                        <span class="font-extrabold text-slate-900 text-sm">x${item.quantity}</span>
-                      </div>
-                      <h4 class="font-bold text-slate-800 text-xs mb-1">${item.name}</h4>
-                      ${item.notes ? `
-                        <div class="text-[11px] text-slate-500 flex items-center gap-1">
-                          <i data-lucide="map-pin" class="w-3 h-3 text-slate-400 flex-shrink-0"></i>
-                          <span>${item.notes}</span>
-                        </div>
-                      ` : ''}
-                    </div>
-
-                    <div class="flex justify-between items-center border-t border-slate-100 pt-2.5 mt-3">
-                      <button onclick="openTransferModal('${item.id}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
-                        <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i>
-                        <span>Transférer</span>
-                      </button>
-                      <div class="flex items-center gap-1 text-slate-400">
-                        <button onclick="editMaterial('${item.id}')" class="p-1 hover:text-slate-700"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
-                        <button onclick="deleteMaterial('${item.id}')" class="p-1 hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
+            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <button onclick="openMilitantModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-pink-400"></i> Militants (<span id="militants-count">0</span>)
+                </button>
+                <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition" title="Télécharger sauvegarde">
+                    <i class="fa-solid fa-download"></i>
+                </button>
+                <button onclick="openCategoryModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition" title="Gérer les types de matériel">
+                    <i class="fa-solid fa-tags"></i>
+                </button>
+                <button onclick="openItemModal()" class="bg-pink-600 hover:bg-pink-700 text-white text-xs sm:text-sm px-4 py-2 rounded-lg font-semibold shadow-md transition flex items-center gap-2">
+                    <i class="fa-solid fa-circle-plus"></i> Attribuer
+                </button>
             </div>
-          </div>
-        `;
-      });
+        </div>
+    </header>
 
-      // 2. Vue PAR MATÉRIEL
-      const vMat = document.getElementById('viewMaterial');
-      vMat.innerHTML = '';
+    <main class="max-w-7xl mx-auto px-4 sm:px-8 pt-6">
 
-      const filteredMaterials = materials.filter(m => {
-        const matchSearch = m.name.toLowerCase().includes(search) || m.holder.toLowerCase().includes(search) || (m.notes && m.notes.toLowerCase().includes(search));
-        const matchCat = catFilter === 'ALL' || m.category === catFilter;
-        return matchSearch && matchCat;
-      });
+        <!-- COMPTEURS HORIZONTAUX -->
+        <div id="stats-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+            <!-- Injecté en JS -->
+        </div>
 
-      filteredMaterials.forEach(m => {
-        const colors = categoryColors[m.category.toUpperCase()] || { bg: "bg-slate-100", text: "text-slate-700" };
-        vMat.innerHTML += `
-          <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
-            <div>
-              <div class="flex justify-between items-start mb-2">
-                <span class="${colors.bg} ${colors.text} text-xs font-bold px-2.5 py-0.5 rounded-md">${m.category}</span>
-                <span class="font-extrabold text-slate-900 text-base">x${m.quantity}</span>
-              </div>
-              <h3 class="font-bold text-slate-900 text-sm mb-2">${m.name}</h3>
-              <div class="text-xs text-slate-600 flex items-center gap-1.5 mb-1 bg-slate-50 p-2 rounded-lg">
-                <i data-lucide="user" class="w-3.5 h-3.5 text-rose-600"></i> Chez : <strong class="text-slate-800">${m.holder}</strong>
-              </div>
-              ${m.notes ? `<div class="text-xs text-slate-500 italic mt-2">${m.notes}</div>` : ''}
+        <!-- BARRE DE RECHERCHE ET ONGLETS -->
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <div class="flex bg-slate-100 p-1 rounded-lg w-full md:w-auto">
+                <button id="btn-view-militant" onclick="switchView('militant')" class="flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-user-group text-slate-500"></i> Vue par Militant
+                </button>
+                <button id="btn-view-material" onclick="switchView('material')" class="flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-boxes-stacked text-slate-500"></i> Vue par Matériel
+                </button>
             </div>
-            <div class="flex justify-between items-center border-t border-slate-100 pt-3 mt-3">
-              <button onclick="openTransferModal('${m.id}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
-                <i data-lucide="arrow-left-right" class="w-3.5 h-3.5"></i> Transférer
-              </button>
-              <div class="flex gap-1 text-slate-400">
-                <button onclick="editMaterial('${m.id}')" class="p-1 hover:text-slate-700"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                <button onclick="deleteMaterial('${m.id}')" class="p-1 hover:text-rose-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-              </div>
+
+            <div class="flex flex-1 items-center gap-2 w-full md:w-auto max-w-xl">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="search-input" oninput="renderApp()" placeholder="Rechercher un militant, téléphone, matériel..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition">
+                </div>
+                <select id="filter-category" onchange="renderApp()" class="py-2 px-3 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-slate-700">
+                    <option value="">Toutes les catégories</option>
+                </select>
             </div>
-          </div>
-        `;
-      });
+        </div>
 
-      renderCategoriesList();
-      renderMilitantsList();
-      lucide.createIcons();
-    }
+        <!-- CONTENU VUES -->
+        <div id="militant-view" class="space-y-6"></div>
+        <div id="material-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden"></div>
 
-    // TOP STATS CARDS BAR
-    function renderStatsBar() {
-      const bar = document.getElementById('statsBar');
-      bar.innerHTML = '';
+    </main>
 
-      categories.forEach(cat => {
-        const total = materials
-          .filter(m => m.category.toLowerCase() === cat.toLowerCase())
-          .reduce((sum, item) => sum + Number(item.quantity), 0);
+    <!-- MODAL MILITANT -->
+    <div id="modal-militant" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative">
+            <h3 id="modal-militant-title" class="text-lg font-bold text-slate-900 mb-4">Ajouter un militant</h3>
+            <form onsubmit="handleSaveMilitant(event)" class="space-y-4">
+                <input type="hidden" id="militant-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nom complet *</label>
+                    <input type="text" id="militant-name" required placeholder="Ex: Thomas L." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Téléphone</label>
+                    <input type="text" id="militant-phone" placeholder="Ex: 06 11 22 33 44" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Secteur</label>
+                    <input type="text" id="militant-sector" placeholder="Ex: Secteur Nord" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Rôle</label>
+                    <input type="text" id="militant-role" placeholder="Ex: Référent tracts" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('modal-militant')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-pink-600 hover:bg-pink-700 text-white rounded-lg shadow">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        bar.innerHTML += `
-          <div class="bg-white p-3 rounded-2xl shadow-2xs border border-slate-200/80 text-center flex flex-col justify-center">
-            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5">${cat}</div>
-            <div class="text-xl font-black text-slate-900">${total}</div>
-          </div>
-        `;
-      });
-    }
+    <!-- MODAL MATÉRIEL -->
+    <div id="modal-item" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative">
+            <h3 id="modal-item-title" class="text-lg font-bold text-slate-900 mb-4">Attribuer du matériel</h3>
+            <form onsubmit="handleSaveItem(event)" class="space-y-4">
+                <input type="hidden" id="item-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Militant responsable *</label>
+                    <select id="item-militant" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Catégorie / Type *</label>
+                    <select id="item-category" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none bg-white"></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Titre / Précision du matériel</label>
+                    <input type="text" id="item-title" placeholder="Ex: Tracts A5 Mobilisation" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Quantité *</label>
+                    <input type="number" id="item-quantity" min="1" value="1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Détail / Emplacement / Notes</label>
+                    <input type="text" id="item-details" placeholder="Ex: Dans son sac à dos, Chez elle, Garage..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('modal-item')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-pink-600 hover:bg-pink-700 text-white rounded-lg shadow">Sauvegarder</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    function updateSelectOptions() {
-      const catSelect = document.getElementById('matCategory');
-      const catFilter = document.getElementById('categoryFilter');
-      const holderSelect = document.getElementById('matHolder');
+    <!-- MODAL TRANSFERT -->
+    <div id="modal-transfer" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative">
+            <h3 class="text-lg font-bold text-slate-900 mb-2">Transférer le matériel</h3>
+            <p id="transfer-item-desc" class="text-xs text-slate-500 mb-4"></p>
+            <form onsubmit="handleSaveTransfer(event)" class="space-y-4">
+                <input type="hidden" id="transfer-item-id">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Nouveau détenteur *</label>
+                    <select id="transfer-militant" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none bg-white"></select>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="closeModal('modal-transfer')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow">Confirmer le transfert</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-      const currentFilter = catFilter.value;
-      catFilter.innerHTML = '<option value="ALL">Toutes les catégories</option>';
-      categories.forEach(c => {
-        catFilter.innerHTML += `<option value="${c}">${c}</option>`;
-      });
-      catFilter.value = currentFilter;
+    <!-- MODAL TYPES DE MATÉRIEL -->
+    <div id="modal-categories" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative">
+            <h3 class="text-lg font-bold text-slate-900 mb-4">Gestion des catégories</h3>
+            
+            <form onsubmit="handleAddCategory(event)" class="flex gap-2 mb-4">
+                <input type="text" id="new-cat-name" placeholder="Nouvelle catégorie (ex: Drapeaux)" required class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
+                <button type="submit" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-semibold">Ajouter</button>
+            </form>
 
-      catSelect.innerHTML = categories.map(c => `<option value="${c}">${c}</option>`).join('');
-      holderSelect.innerHTML = militants.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
-    }
+            <div id="categories-list" class="space-y-2 max-h-60 overflow-y-auto pr-1"></div>
 
-    // ACTIONS MATERIAL
-    function openAddMaterialModal(defaultHolder = "") {
-      document.getElementById('materialModalTitle').innerText = "Attribuer du matériel";
-      document.getElementById('matId').value = "";
-      document.getElementById('materialForm').reset();
-      if (defaultHolder) {
-        document.getElementById('matHolder').value = defaultHolder;
-      }
-      openModal('materialModal');
-    }
+            <div class="flex justify-end pt-4 border-t border-slate-100 mt-4">
+                <button type="button" onclick="closeModal('modal-categories')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Fermer</button>
+            </div>
+        </div>
+    </div>
 
-    function saveMaterial(e) {
-      e.preventDefault();
-      const id = document.getElementById('matId').value || 'mat_' + Date.now();
-      const holder = document.getElementById('matHolder').value;
-      const category = document.getElementById('matCategory').value;
-      const name = document.getElementById('matName').value.trim();
-      const quantity = document.getElementById('matQuantity').value;
-      const notes = document.getElementById('matNotes').value.trim();
+    <script>
+        // CONFIGURATION FIREBASE
+        const firebaseConfig = {
+            databaseURL: "https://inventaire-militant-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-      const idx = materials.findIndex(m => m.id === id);
-      const newMat = { id, holder, category, name, quantity, notes };
+        // ÉTAT APPLICATION
+        let appState = {
+            militants: {},
+            items: {},
+            categories: ["Affiches", "Colle", "Tracts", "Barnum", "Tables", "Enceinte", "Micro", "Divers"],
+            currentView: "militant",
+            isSavingLocally: false
+        };
 
-      if (idx >= 0) materials[idx] = newMat;
-      else materials.push(newMat);
+        // COULEURS BADGES PAR CATÉGORIE
+        const catColors = {
+            "Affiches": "bg-purple-100 text-purple-700 border-purple-200",
+            "Colle": "bg-amber-100 text-amber-800 border-amber-200",
+            "Tracts": "bg-blue-100 text-blue-700 border-blue-200",
+            "Barnum": "bg-emerald-100 text-emerald-700 border-emerald-200",
+            "Tables": "bg-sky-100 text-sky-700 border-sky-200",
+            "Enceinte": "bg-indigo-100 text-indigo-700 border-indigo-200",
+            "Micro": "bg-rose-100 text-rose-700 border-rose-200"
+        };
 
-      sync();
-      closeModal('materialModal');
-    }
-
-    function editMaterial(id) {
-      const m = materials.find(item => item.id === id);
-      if (!m) return;
-      document.getElementById('materialModalTitle').innerText = "Modifier le matériel";
-      document.getElementById('matId').value = m.id;
-      document.getElementById('matHolder').value = m.holder;
-      document.getElementById('matCategory').value = m.category;
-      document.getElementById('matName').value = m.name;
-      document.getElementById('matQuantity').value = m.quantity;
-      document.getElementById('matNotes').value = m.notes || "";
-      openModal('materialModal');
-    }
-
-    function deleteMaterial(id) {
-      if (confirm("Supprimer cet élément ?")) {
-        materials = materials.filter(m => m.id !== id);
-        sync();
-      }
-    }
-
-    // TRANSFERT
-    function openTransferModal(matId) {
-      const item = materials.find(m => m.id === matId);
-      if (!item) return;
-
-      document.getElementById('transferMatId').value = matId;
-      document.getElementById('transferItemDetails').innerHTML = `
-        <strong>${item.name}</strong> (x${item.quantity})<br>
-        Actuellement chez : <span class="font-bold text-rose-600">${item.holder}</span>
-      `;
-
-      const select = document.getElementById('transferNewHolder');
-      select.innerHTML = militants
-        .filter(m => m.name !== item.holder)
-        .map(m => `<option value="${m.name}">${m.name}</option>`)
-        .join('');
-
-      openModal('transferModal');
-    }
-
-    function executeTransfer(e) {
-      e.preventDefault();
-      const matId = document.getElementById('transferMatId').value;
-      const newHolder = document.getElementById('transferNewHolder').value;
-
-      const item = materials.find(m => m.id === matId);
-      if (item) {
-        item.holder = newHolder;
-        sync();
-      }
-      closeModal('transferModal');
-    }
-
-    // CATEGORIES (TYPES DE MATÉRIEL)
-    function addCategory(e) {
-      e.preventDefault();
-      const val = document.getElementById('newCategoryInput').value.trim();
-      if (val && !categories.includes(val)) {
-        categories.push(val);
-        sync();
-        document.getElementById('newCategoryInput').value = '';
-      }
-    }
-
-    function editCategoryName(oldName) {
-      const newName = prompt("Nouveau nom pour ce type de matériel :", oldName);
-      if (newName && newName.trim() !== "" && newName !== oldName) {
-        const trimmed = newName.trim();
-        const index = categories.indexOf(oldName);
-        if (index !== -1) {
-          categories[index] = trimmed;
-          materials.forEach(m => {
-            if (m.category.toLowerCase() === oldName.toLowerCase()) {
-              m.category = trimmed;
-            }
-          });
-          sync();
+        function getCatBadgeClass(cat) {
+            return catColors[cat] || "bg-slate-100 text-slate-700 border-slate-200";
         }
-      }
-    }
 
-    function deleteCategory(catName) {
-      if (materials.some(m => m.category.toLowerCase() === catName.toLowerCase())) {
-        alert("Impossible de supprimer ce type car du matériel y est rattaché !");
-        return;
-      }
-      categories = categories.filter(c => c !== catName);
-      sync();
-    }
+        // INITIALISATION ECOUTEURS TEMPS RÉEL
+        db.ref('categories').on('value', snap => {
+            if (snap.exists()) {
+                appState.categories = snap.val();
+            } else {
+                db.ref('categories').set(appState.categories);
+            }
+            updateCategoryDropdowns();
+            renderApp();
+        });
 
-    function renderCategoriesList() {
-      const list = document.getElementById('categoriesList');
-      list.innerHTML = categories.map(c => `
-        <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
-          <span class="font-bold text-slate-800">${c}</span>
-          <div class="flex items-center gap-1">
-            <button onclick="editCategoryName('${c}')" title="Éditer / Renommer" class="p-1 text-slate-400 hover:text-indigo-600 rounded">
-              <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-            </button>
-            <button onclick="deleteCategory('${c}')" title="Supprimer" class="p-1 text-slate-400 hover:text-rose-600 rounded">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-        </div>
-      `).join('');
-    }
+        db.ref('militants').on('value', snap => {
+            if (appState.isSavingLocally) return;
+            appState.militants = snap.val() || {};
+            document.getElementById('militants-count').innerText = Object.keys(appState.militants).length;
+            renderApp();
+        });
 
-    // MILITANTS
-    function addMilitant(e) {
-      e.preventDefault();
-      const name = document.getElementById('newMilName').value.trim();
-      const phone = document.getElementById('newMilPhone').value.trim();
-      const role = document.getElementById('newMilRole').value.trim();
+        db.ref('items').on('value', snap => {
+            if (appState.isSavingLocally) return;
+            appState.items = snap.val() || {};
+            renderApp();
+        });
 
-      if (name) {
-        militants.push({ id: 'm_' + Date.now(), name, phone, role });
-        sync();
-        document.getElementById('newMilName').value = '';
-        document.getElementById('newMilPhone').value = '';
-        document.getElementById('newMilRole').value = '';
-      }
-    }
+        function switchView(view) {
+            appState.currentView = view;
+            const btnM = document.getElementById('btn-view-militant');
+            const btnMat = document.getElementById('btn-view-material');
+            
+            if (view === 'militant') {
+                btnM.className = "flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-2";
+                btnMat.className = "flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2";
+                document.getElementById('militant-view').classList.remove('hidden');
+                document.getElementById('material-view').classList.add('hidden');
+            } else {
+                btnMat.className = "flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition bg-white text-slate-900 shadow-sm flex items-center justify-center gap-2";
+                btnM.className = "flex-1 md:flex-none px-4 py-2 rounded-md text-xs sm:text-sm font-semibold transition text-slate-600 hover:text-slate-900 flex items-center justify-center gap-2";
+                document.getElementById('militant-view').classList.add('hidden');
+                document.getElementById('material-view').classList.remove('hidden');
+            }
+            renderApp();
+        }
 
-    function editMilitant(id) {
-      const m = militants.find(m => m.id === id);
-      if (!m) return;
-      const newPhone = prompt(`Téléphone pour ${m.name} :`, m.phone || "");
-      if (newPhone !== null) m.phone = newPhone.trim();
-      const newRole = prompt(`Rôle / Secteur pour ${m.name} :`, m.role || "");
-      if (newRole !== null) m.role = newRole.trim();
-      sync();
-    }
+        function updateCategoryDropdowns() {
+            const selects = [document.getElementById('filter-category'), document.getElementById('item-category')];
+            selects.forEach(sel => {
+                if (!sel) return;
+                const current = sel.value;
+                const isFilter = sel.id === 'filter-category';
+                sel.innerHTML = isFilter ? '<option value="">Toutes les catégories</option>' : '';
+                appState.categories.forEach(c => {
+                    sel.innerHTML += `<option value="${c}">${c}</option>`;
+                });
+                if (current && appState.categories.includes(current)) sel.value = current;
+            });
+            renderCategoryList();
+        }
 
-    function deleteMilitant(id, name) {
-      if (materials.some(m => m.holder === name)) {
-        alert("Impossible de supprimer ce militant car du matériel lui est attribué !");
-        return;
-      }
-      militants = militants.filter(m => m.id !== id);
-      sync();
-    }
+        function renderApp() {
+            const search = document.getElementById('search-input').value.toLowerCase().trim();
+            const filterCat = document.getElementById('filter-category').value;
 
-    function renderMilitantsList() {
-      const list = document.getElementById('militantsList');
-      list.innerHTML = militants.map(m => `
-        <div class="flex justify-between items-center p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs">
-          <div>
-            <div class="font-bold text-slate-800">${m.name}</div>
-            <div class="text-slate-400 text-[11px]">${m.phone || 'Pas de tél'} ${m.role ? '• ' + m.role : ''}</div>
-          </div>
-          <button onclick="deleteMilitant('${m.id}', '${m.name}')" class="p-1 text-slate-400 hover:text-rose-600">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-          </button>
-        </div>
-      `).join('');
-    }
+            // 1. STATS
+            const statsContainer = document.getElementById('stats-container');
+            statsContainer.innerHTML = '';
+            
+            const catTotals = {};
+            appState.categories.forEach(c => catTotals[c] = 0);
+            
+            Object.values(appState.items).forEach(item => {
+                if (catTotals[item.category] !== undefined) {
+                    catTotals[item.category] += Number(item.quantity || 0);
+                } else {
+                    catTotals[item.category] = Number(item.quantity || 0);
+                }
+            });
 
-    function resetFilters() {
-      document.getElementById('searchInput').value = '';
-      document.getElementById('categoryFilter').value = 'ALL';
-      renderApp();
-    }
+            appState.categories.forEach(cat => {
+                const total = catTotals[cat] || 0;
+                statsContainer.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-center flex flex-col justify-center">
+                        <span class="text-[10px] font-bold tracking-wider text-slate-400 uppercase">${cat}</span>
+                        <span class="text-xl font-black text-slate-800 mt-0.5">${total}</span>
+                    </div>
+                `;
+            });
 
-    function openModal(id) {
-      document.getElementById(id).classList.remove('hidden');
-      document.getElementById(id).classList.add('flex');
-    }
+            // 2. VUE PAR MILITANT
+            const militantView = document.getElementById('militant-view');
+            militantView.innerHTML = '';
 
-    function closeModal(id) {
-      document.getElementById(id).classList.add('hidden');
-      document.getElementById(id).classList.remove('flex');
-    }
+            const militantsList = Object.entries(appState.militants);
 
-    // Init
-    lucide.createIcons();
-    renderApp();
-  </script>
+            if (militantsList.length === 0) {
+                militantView.innerHTML = `
+                    <div class="bg-white rounded-xl p-8 text-center text-slate-400 border border-slate-200">
+                        <i class="fa-solid fa-users text-4xl mb-2 text-slate-300"></i>
+                        <p class="text-sm font-medium">Aucun militant enregistré.</p>
+                        <button onclick="openMilitantModal()" class="mt-3 px-4 py-2 bg-pink-600 text-white rounded-lg text-xs font-semibold">Ajouter un militant</button>
+                    </div>
+                `;
+            }
+
+            militantsList.forEach(([mId, mData]) => {
+                // Filtre recherche militant
+                const matchSearch = mData.name.toLowerCase().includes(search) || 
+                                    (mData.phone && mData.phone.toLowerCase().includes(search)) ||
+                                    (mData.sector && mData.sector.toLowerCase().includes(search)) ||
+                                    (mData.role && mData.role.toLowerCase().includes(search));
+
+                // Matériel du militant
+                let mItems = Object.entries(appState.items)
+                    .filter(([iId, item]) => item.militantId === mId)
+                    .filter(([iId, item]) => !filterCat || item.category === filterCat)
+                    .filter(([iId, item]) => {
+                        if (!search) return true;
+                        return matchSearch || 
+                               (item.category && item.category.toLowerCase().includes(search)) ||
+                               (item.title && item.title.toLowerCase().includes(search)) ||
+                               (item.details && item.details.toLowerCase().includes(search));
+                    });
+
+                if (search && !matchSearch && mItems.length === 0) return;
+
+                let subtitleParts = [];
+                if (mData.phone) subtitleParts.push(`<i class="fa-solid fa-phone text-[10px] mr-1"></i>${mData.phone}`);
+                if (mData.sector) subtitleParts.push(`Secteur : ${mData.sector}`);
+                if (mData.role) subtitleParts.push(`Rôle : ${mData.role}`);
+                const subtitleStr = subtitleParts.join(' • ');
+
+                let itemsGridHtml = '';
+                if (mItems.length === 0) {
+                    itemsGridHtml = `<p class="text-xs text-slate-400 italic p-4">Aucun matériel attribué</p>`;
+                } else {
+                    itemsGridHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-4">`;
+                    mItems.forEach(([iId, item]) => {
+                        itemsGridHtml += `
+                            <div class="bg-slate-50 rounded-xl p-3 border border-slate-200/80 hover:border-slate-300 transition flex flex-col justify-between">
+                                <div>
+                                    <div class="flex justify-between items-start gap-2 mb-1">
+                                        <span class="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md border ${getCatBadgeClass(item.category)}">
+                                            ${item.category}
+                                        </span>
+                                        <span class="text-sm font-extrabold text-slate-800">x${item.quantity}</span>
+                                    </div>
+                                    <h4 class="text-xs font-bold text-slate-800">${item.title || item.category}</h4>
+                                    ${item.details ? `<p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1"><i class="fa-solid fa-location-dot text-[10px] text-slate-400"></i> ${item.details}</p>` : ''}
+                                </div>
+                                
+                                <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-200/60">
+                                    <button onclick="openTransferModal('${iId}')" class="text-indigo-600 hover:text-indigo-800 text-xs font-semibold flex items-center gap-1">
+                                        <i class="fa-solid fa-arrow-right-arrow-left text-[10px]"></i> Transférer
+                                    </button>
+                                    <div class="flex items-center gap-2">
+                                        <button onclick="openItemModal('${iId}')" class="text-slate-400 hover:text-slate-700 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                        <button onclick="deleteItem('${iId}')" class="text-slate-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    itemsGridHtml += `</div>`;
+                }
+
+                militantView.innerHTML += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-[#0f172a] text-white px-5 py-3 flex justify-between items-center">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-pink-600 flex items-center justify-center font-bold text-xs uppercase text-white shadow">
+                                    ${mData.name.substring(0, 2)}
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="font-bold text-sm tracking-tight">${mData.name}</h3>
+                                        <button onclick="openMilitantModal('${mId}')" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-pen"></i></button>
+                                        <button onclick="deleteMilitant('${mId}')" class="text-slate-400 hover:text-rose-400 text-xs"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                    ${subtitleStr ? `<p class="text-[11px] text-slate-400">${subtitleStr}</p>` : ''}
+                                </div>
+                            </div>
+                            <button onclick="openItemForMilitant('${mId}')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-plus text-pink-400"></i> Ajouter du matos
+                            </button>
+                        </div>
+                        ${itemsGridHtml}
+                    </div>
+                `;
+            });
+
+            // 3. VUE PAR MATÉRIEL (REGROUPEMENT PAR CATÉGORIE EN UN SEUL BLOC)
+            const materialView = document.getElementById('material-view');
+            materialView.innerHTML = '';
+
+            // Grouper les items par catégorie
+            const itemsByCategory = {};
+            appState.categories.forEach(c => itemsByCategory[c] = []);
+
+            Object.entries(appState.items).forEach(([iId, item]) => {
+                if (!filterCat || item.category === filterCat) {
+                    if (!itemsByCategory[item.category]) itemsByCategory[item.category] = [];
+                    itemsByCategory[item.category].push({ id: iId, ...item });
+                }
+            });
+
+            let hasMaterial = false;
+
+            Object.entries(itemsByCategory).forEach(([catName, itemsList]) => {
+                // Filtrer par recherche
+                const filteredItems = itemsList.filter(item => {
+                    if (!search) return true;
+                    const mData = appState.militants[item.militantId] || { name: '' };
+                    return catName.toLowerCase().includes(search) ||
+                           (item.title && item.title.toLowerCase().includes(search)) ||
+                           (item.details && item.details.toLowerCase().includes(search)) ||
+                           mData.name.toLowerCase().includes(search);
+                });
+
+                if (filteredItems.length === 0) return;
+                hasMaterial = true;
+
+                const totalCatQty = filteredItems.reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+
+                let holdersHtml = '';
+                filteredItems.forEach(item => {
+                    const mData = appState.militants[item.militantId] || { name: 'Inconnu' };
+                    holdersHtml += `
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-2 last:mb-0">
+                            <div class="flex justify-between items-start gap-2">
+                                <div>
+                                    <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                        <i class="fa-regular fa-user text-pink-600 text-[10px]"></i> ${mData.name}
+                                    </div>
+                                    <p class="text-[11px] font-semibold text-slate-700 mt-0.5">${item.title || catName}</p>
+                                    ${item.details ? `<p class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1"><i class="fa-solid fa-location-dot text-slate-400"></i> ${item.details}</p>` : ''}
+                                </div>
+                                <span class="text-xs font-black bg-white px-2 py-1 rounded-md border border-slate-200 text-slate-800">x${item.quantity}</span>
+                            </div>
+
+                            <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-200/60">
+                                <button onclick="openTransferModal('${item.id}')" class="text-indigo-600 hover:text-indigo-800 text-[11px] font-semibold flex items-center gap-1">
+                                    <i class="fa-solid fa-arrow-right-arrow-left text-[9px]"></i> Transférer
+                                </button>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="openItemModal('${item.id}')" class="text-slate-400 hover:text-slate-700 text-xs"><i class="fa-solid fa-pen"></i></button>
+                                    <button onclick="deleteItem('${item.id}')" class="text-slate-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-trash-can"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                materialView.innerHTML += `
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+                                <span class="text-xs font-bold px-2.5 py-1 rounded-md border ${getCatBadgeClass(catName)}">
+                                    ${catName}
+                                </span>
+                                <div class="text-right">
+                                    <span class="text-xs text-slate-400 block uppercase font-bold tracking-wider">Total</span>
+                                    <span class="text-sm font-black text-slate-800">x${totalCatQty}</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                ${holdersHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (!hasMaterial) {
+                materialView.innerHTML = `
+                    <div class="col-span-full bg-white rounded-xl p-8 text-center text-slate-400 border border-slate-200">
+                        <i class="fa-solid fa-boxes-stacked text-4xl mb-2 text-slate-300"></i>
+                        <p class="text-sm font-medium">Aucun matériel trouvé.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // --- GESTION DES MODALES ET ACTIONS ---
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // MILITANTS
+        function openMilitantModal(mId = null) {
+            document.getElementById('militant-id').value = mId || '';
+            document.getElementById('modal-militant-title').innerText = mId ? 'Modifier le militant' : 'Ajouter un militant';
+            
+            if (mId && appState.militants[mId]) {
+                const m = appState.militants[mId];
+                document.getElementById('militant-name').value = m.name || '';
+                document.getElementById('militant-phone').value = m.phone || '';
+                document.getElementById('militant-sector').value = m.sector || '';
+                document.getElementById('militant-role').value = m.role || '';
+            } else {
+                document.getElementById('militant-name').value = '';
+                document.getElementById('militant-phone').value = '';
+                document.getElementById('militant-sector').value = '';
+                document.getElementById('militant-role').value = '';
+            }
+            document.getElementById('modal-militant').classList.remove('hidden');
+        }
+
+        function handleSaveMilitant(e) {
+            e.preventDefault();
+            const id = document.getElementById('militant-id').value || db.ref('militants').push().key;
+            const data = {
+                name: document.getElementById('militant-name').value.trim(),
+                phone: document.getElementById('militant-phone').value.trim(),
+                sector: document.getElementById('militant-sector').value.trim(),
+                role: document.getElementById('militant-role').value.trim()
+            };
+
+            appState.isSavingLocally = true;
+            db.ref('militants/' + id).set(data).then(() => {
+                appState.isSavingLocally = false;
+                closeModal('modal-militant');
+            });
+        }
+
+        function deleteMilitant(mId) {
+            if (confirm("Supprimer ce militant ? Le matériel associé ne sera pas supprimé mais devra être réattribué.")) {
+                appState.isSavingLocally = true;
+                db.ref('militants/' + mId).remove().then(() => {
+                    appState.isSavingLocally = false;
+                });
+            }
+        }
+
+        // MATÉRIEL
+        function populateMilitantsDropdown(selectId) {
+            const sel = document.getElementById(selectId);
+            sel.innerHTML = '';
+            Object.entries(appState.militants).forEach(([mId, mData]) => {
+                sel.innerHTML += `<option value="${mId}">${mData.name}</option>`;
+            });
+        }
+
+        function openItemModal(iId = null) {
+            if (Object.keys(appState.militants).length === 0) {
+                alert("Veuillez d'abord ajouter au moins un militant.");
+                openMilitantModal();
+                return;
+            }
+
+            populateMilitantsDropdown('item-militant');
+            updateCategoryDropdowns();
+
+            document.getElementById('item-id').value = iId || '';
+            document.getElementById('modal-item-title').innerText = iId ? 'Modifier le matériel' : 'Attribuer du matériel';
+
+            if (iId && appState.items[iId]) {
+                const item = appState.items[iId];
+                document.getElementById('item-militant').value = item.militantId;
+                document.getElementById('item-category').value = item.category;
+                document.getElementById('item-title').value = item.title || '';
+                document.getElementById('item-quantity').value = item.quantity || 1;
+                document.getElementById('item-details').value = item.details || '';
+            } else {
+                document.getElementById('item-title').value = '';
+                document.getElementById('item-quantity').value = 1;
+                document.getElementById('item-details').value = '';
+            }
+            document.getElementById('modal-item').classList.remove('hidden');
+        }
+
+        function openItemForMilitant(mId) {
+            openItemModal();
+            document.getElementById('item-militant').value = mId;
+        }
+
+        function handleSaveItem(e) {
+            e.preventDefault();
+            const id = document.getElementById('item-id').value || db.ref('items').push().key;
+            const data = {
+                militantId: document.getElementById('item-militant').value,
+                category: document.getElementById('item-category').value,
+                title: document.getElementById('item-title').value.trim(),
+                quantity: Number(document.getElementById('item-quantity').value),
+                details: document.getElementById('item-details').value.trim()
+            };
+
+            appState.isSavingLocally = true;
+            db.ref('items/' + id).set(data).then(() => {
+                appState.isSavingLocally = false;
+                closeModal('modal-item');
+            });
+        }
+
+        function deleteItem(iId) {
+            if (confirm("Supprimer ce matériel de l'inventaire ?")) {
+                appState.isSavingLocally = true;
+                db.ref('items/' + iId).remove().then(() => {
+                    appState.isSavingLocally = false;
+                });
+            }
+        }
+
+        // TRANSFERT
+        function openTransferModal(iId) {
+            const item = appState.items[iId];
+            if (!item) return;
+
+            populateMilitantsDropdown('transfer-militant');
+            document.getElementById('transfer-item-id').value = iId;
+            
+            const currentHolder = appState.militants[item.militantId] ? appState.militants[item.militantId].name : 'Inconnu';
+            document.getElementById('transfer-item-desc').innerText = `${item.category} (${item.title || 'Sans titre'}) x${item.quantity} - Actuellement chez ${currentHolder}`;
+
+            document.getElementById('modal-transfer').classList.remove('hidden');
+        }
+
+        function handleSaveTransfer(e) {
+            e.preventDefault();
+            const iId = document.getElementById('transfer-item-id').value;
+            const newMilitantId = document.getElementById('transfer-militant').value;
+
+            appState.isSavingLocally = true;
+            db.ref(`items/${iId}/militantId`).set(newMilitantId).then(() => {
+                appState.isSavingLocally = false;
+                closeModal('modal-transfer');
+            });
+        }
+
+        // CATÉGORIES
+        function openCategoryModal() {
+            renderCategoryList();
+            document.getElementById('modal-categories').classList.remove('hidden');
+        }
+
+        function renderCategoryList() {
+            const list = document.getElementById('categories-list');
+            if (!list) return;
+            list.innerHTML = '';
+            appState.categories.forEach((cat, index) => {
+                list.innerHTML += `
+                    <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
+                        <span class="font-bold text-slate-700">${cat}</span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="renameCategory(${index})" class="text-slate-400 hover:text-slate-700"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteCategory(${index})" class="text-slate-400 hover:text-rose-600"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function handleAddCategory(e) {
+            e.preventDefault();
+            const input = document.getElementById('new-cat-name');
+            const name = input.value.trim();
+            if (name && !appState.categories.includes(name)) {
+                appState.categories.push(name);
+                db.ref('categories').set(appState.categories);
+                input.value = '';
+            }
+        }
+
+        function renameCategory(index) {
+            const oldName = appState.categories[index];
+            const newName = prompt("Nouveau nom pour la catégorie :", oldName);
+            if (newName && newName.trim() && newName !== oldName) {
+                appState.categories[index] = newName.trim();
+                db.ref('categories').set(appState.categories);
+
+                // Mettre à jour les matériels existants de cette catégorie
+                Object.entries(appState.items).forEach(([iId, item]) => {
+                    if (item.category === oldName) {
+                        db.ref(`items/${iId}/category`).set(newName.trim());
+                    }
+                });
+            }
+        }
+
+        function deleteCategory(index) {
+            const cat = appState.categories[index];
+            if (confirm(`Supprimer la catégorie "${cat}" ?`)) {
+                appState.categories.splice(index, 1);
+                db.ref('categories').set(appState.categories);
+            }
+        }
+
+        // SAUVEGARDE / EXPORT DATA
+        function exportData() {
+            const data = {
+                militants: appState.militants,
+                items: appState.items,
+                categories: appState.categories
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sauvegarde-matos-militant-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+    </script>
 </body>
 </html>
