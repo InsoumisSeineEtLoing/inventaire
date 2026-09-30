@@ -12,7 +12,7 @@
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matos Militant - Gestion d'équipe & Inventaire</title>
+    <title>Matériel Militant - Inventaire</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -43,7 +43,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold tracking-tight">Matos Militant</h1>
-                    <p class="text-xs text-slate-400">Qui a quoi ? & Gestion d'équipe</p>
+                    <p class="text-xs text-slate-400">Qui a quoi ?</p>
                 </div>
             </div>
 
@@ -124,7 +124,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Secteur</label>
-                    <input type="text" id="militant-sector" placeholder="Ex: Moret" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
+                    <input type="text" id="militant-sector" placeholder="Ex: Secteur Nord" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Rôle</label>
@@ -225,7 +225,22 @@
             currentView: "militant"
         };
 
-        // COULEURS BADGES PAR CATÉGORIE
+        // PALETTE DE COULEURS PRÉDÉFINIES POUR LES NOUVELLES CATÉGORIES AUTOMATIQUES
+        const autoPalette = [
+            "bg-purple-100 text-purple-700 border-purple-200",
+            "bg-amber-100 text-amber-800 border-amber-200",
+            "bg-blue-100 text-blue-700 border-blue-200",
+            "bg-emerald-100 text-emerald-700 border-emerald-200",
+            "bg-sky-100 text-sky-700 border-sky-200",
+            "bg-indigo-100 text-indigo-700 border-indigo-200",
+            "bg-rose-100 text-rose-700 border-rose-200",
+            "bg-teal-100 text-teal-700 border-teal-200",
+            "bg-orange-100 text-orange-800 border-orange-200",
+            "bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200",
+            "bg-cyan-100 text-cyan-800 border-cyan-200"
+        ];
+
+        // COULEURS FIXES PAR DÉFAUT POUR LES CLASSIQUES
         const catColors = {
             "Affiches": "bg-purple-100 text-purple-700 border-purple-200",
             "Colle": "bg-amber-100 text-amber-800 border-amber-200",
@@ -237,7 +252,15 @@
         };
 
         function getCatBadgeClass(cat) {
-            return catColors[cat] || "bg-slate-100 text-slate-700 border-slate-200";
+            if (catColors[cat]) return catColors[cat];
+            
+            // Si la catégorie n'est pas dans la liste fixe, on génère une couleur stable basée sur le nom de la catégorie
+            let hash = 0;
+            for (let i = 0; i < cat.length; i++) {
+                hash = cat.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const index = Math.abs(hash) % autoPalette.length;
+            return autoPalette[index];
         }
 
         // INITIALISATION ÉCOUTEURS TEMPS RÉEL
@@ -289,7 +312,6 @@
                 const el = document.getElementById(`militant-card-${mId}`);
                 if (el) {
                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Petit effet visuel flash de surbrillance
                     el.classList.add('ring-4', 'ring-pink-400');
                     setTimeout(() => el.classList.remove('ring-4', 'ring-pink-400'), 1500);
                 }
@@ -345,7 +367,6 @@
             militantView.innerHTML = '';
             let militantsList = Object.entries(appState.militants);
 
-            // Application du tri
             militantsList.sort((a, b) => {
                 const nameA = a[1].name.toLowerCase();
                 const nameB = b[1].name.toLowerCase();
@@ -490,7 +511,6 @@
 
                     totalSectorMatCount += mItems.reduce((acc, [i, item]) => acc + Number(item.quantity || 0), 0);
 
-                    // Utilisation de la catégorie (et non du titre) pour les badges de la vue par secteur
                     let itemBadges = mItems.map(([iId, item]) => `
                         <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded border ${getCatBadgeClass(item.category)}">
                             ${item.category} (x${item.quantity})
