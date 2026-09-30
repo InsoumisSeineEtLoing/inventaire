@@ -71,7 +71,7 @@
             <!-- Injecté en JS -->
         </div>
 
-        <!-- BARRE DE RECHERCHE ET ONGLETS -->
+        <!-- BARRE DE RECHERCHE, FILTRES ET TRI -->
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
             
             <div class="flex bg-slate-100 p-1 rounded-lg w-full md:w-auto overflow-x-auto">
@@ -86,13 +86,18 @@
                 </button>
             </div>
 
-            <div class="flex flex-1 items-center gap-2 w-full md:w-auto max-w-xl">
-                <div class="relative flex-1">
+            <div class="flex flex-1 items-center gap-2 w-full md:w-auto max-w-2xl flex-wrap sm:flex-nowrap">
+                <div class="relative flex-1 min-w-[180px]">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                     <input type="text" id="search-input" oninput="renderApp()" placeholder="Rechercher un militant, téléphone, secteur..." class="w-full pl-9 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition">
                 </div>
                 <select id="filter-category" onchange="renderApp()" class="py-2 px-3 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-slate-700">
                     <option value="">Toutes les catégories</option>
+                </select>
+                <select id="sort-order" onchange="renderApp()" class="py-2 px-3 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-slate-700">
+                    <option value="az">Alphabétique (A-Z)</option>
+                    <option value="za">Alphabétique (Z-A)</option>
+                    <option value="mat-desc">Plus de matériel</option>
                 </select>
             </div>
         </div>
@@ -295,6 +300,7 @@
         function renderApp() {
             const search = document.getElementById('search-input').value.toLowerCase().trim();
             const filterCat = document.getElementById('filter-category').value;
+            const sortOrder = document.getElementById('sort-order').value;
 
             // 1. STATS
             const statsContainer = document.getElementById('stats-container');
@@ -321,10 +327,27 @@
                 `;
             });
 
-            // 2. VUE PAR MILITANT
+            // 2. VUE PAR MILITANT (AVEC TRI)
             const militantView = document.getElementById('militant-view');
             militantView.innerHTML = '';
-            const militantsList = Object.entries(appState.militants);
+            let militantsList = Object.entries(appState.militants);
+
+            // Application du tri
+            militantsList.sort((a, b) => {
+                const nameA = a[1].name.toLowerCase();
+                const nameB = b[1].name.toLowerCase();
+
+                if (sortOrder === 'az') {
+                    return nameA.localeCompare(nameB);
+                } else if (sortOrder === 'za') {
+                    return nameB.localeCompare(nameA);
+                } else if (sortOrder === 'mat-desc') {
+                    const countA = Object.values(appState.items).filter(i => i.militantId === a[0]).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+                    const countB = Object.values(appState.items).filter(i => i.militantId === b[0]).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
+                    return countB - countA;
+                }
+                return 0;
+            });
 
             if (militantsList.length === 0) {
                 militantView.innerHTML = `
@@ -719,7 +742,11 @@
         function populateMilitantsDropdown(selectId) {
             const sel = document.getElementById(selectId);
             sel.innerHTML = '';
-            Object.entries(appState.militants).forEach(([id, m]) => {
+            
+            // On trie aussi les militants par ordre alphabétique dans les listes déroulantes pour plus de clarté
+            let sortedMilitants = Object.entries(appState.militants).sort((a, b) => a[1].name.localeCompare(b[1].name));
+
+            sortedMilitants.forEach(([id, m]) => {
                 sel.innerHTML += `<option value="${id}">${m.name} ${m.sector ? '(' + m.sector + ')' : ''}</option>`;
             });
         }
