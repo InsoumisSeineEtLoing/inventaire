@@ -205,8 +205,7 @@
             militants: {},
             items: {},
             categories: ["Affiches", "Colle", "Tracts", "Barnum", "Tables", "Enceinte", "Micro", "Divers"],
-            currentView: "militant",
-            isSavingLocally: false
+            currentView: "militant"
         };
 
         // COULEURS BADGES PAR CATÉGORIE
@@ -224,7 +223,7 @@
             return catColors[cat] || "bg-slate-100 text-slate-700 border-slate-200";
         }
 
-        // INITIALISATION ECOUTEURS TEMPS RÉEL
+        // INITIALISATION ECOUTEURS TEMPS RÉEL (Direct & Instantané)
         db.ref('categories').on('value', snap => {
             if (snap.exists()) {
                 appState.categories = snap.val();
@@ -236,14 +235,12 @@
         });
 
         db.ref('militants').on('value', snap => {
-            if (appState.isSavingLocally) return;
             appState.militants = snap.val() || {};
             document.getElementById('militants-count').innerText = Object.keys(appState.militants).length;
             renderApp();
         });
 
         db.ref('items').on('value', snap => {
-            if (appState.isSavingLocally) return;
             appState.items = snap.val() || {};
             renderApp();
         });
@@ -328,13 +325,11 @@
             }
 
             militantsList.forEach(([mId, mData]) => {
-                // Filtre recherche militant
                 const matchSearch = mData.name.toLowerCase().includes(search) || 
                                     (mData.phone && mData.phone.toLowerCase().includes(search)) ||
                                     (mData.sector && mData.sector.toLowerCase().includes(search)) ||
                                     (mData.role && mData.role.toLowerCase().includes(search));
 
-                // Matériel du militant
                 let mItems = Object.entries(appState.items)
                     .filter(([iId, item]) => item.militantId === mId)
                     .filter(([iId, item]) => !filterCat || item.category === filterCat)
@@ -413,11 +408,10 @@
                 `;
             });
 
-            // 3. VUE PAR MATÉRIEL (REGROUPEMENT PAR CATÉGORIE EN UN SEUL BLOC)
+            // 3. VUE PAR MATÉRIEL (REGROUPEMENT PAR CATÉGORIE)
             const materialView = document.getElementById('material-view');
             materialView.innerHTML = '';
 
-            // Grouper les items par catégorie
             const itemsByCategory = {};
             appState.categories.forEach(c => itemsByCategory[c] = []);
 
@@ -431,7 +425,6 @@
             let hasMaterial = false;
 
             Object.entries(itemsByCategory).forEach(([catName, itemsList]) => {
-                // Filtrer par recherche
                 const filteredItems = itemsList.filter(item => {
                     if (!search) return true;
                     const mData = appState.militants[item.militantId] || { name: '' };
@@ -542,19 +535,14 @@
                 role: document.getElementById('militant-role').value.trim()
             };
 
-            appState.isSavingLocally = true;
-            db.ref('militants/' + id).set(data).then(() => {
-                appState.isSavingLocally = false;
-                closeModal('modal-militant');
+            db.ref('militants/' + id).set(data, (error) => {
+                if (!error) closeModal('modal-militant');
             });
         }
 
         function deleteMilitant(mId) {
             if (confirm("Supprimer ce militant ? Le matériel associé ne sera pas supprimé mais devra être réattribué.")) {
-                appState.isSavingLocally = true;
-                db.ref('militants/' + mId).remove().then(() => {
-                    appState.isSavingLocally = false;
-                });
+                db.ref('militants/' + mId).remove();
             }
         }
 
@@ -611,19 +599,14 @@
                 details: document.getElementById('item-details').value.trim()
             };
 
-            appState.isSavingLocally = true;
-            db.ref('items/' + id).set(data).then(() => {
-                appState.isSavingLocally = false;
-                closeModal('modal-item');
+            db.ref('items/' + id).set(data, (error) => {
+                if (!error) closeModal('modal-item');
             });
         }
 
         function deleteItem(iId) {
             if (confirm("Supprimer ce matériel de l'inventaire ?")) {
-                appState.isSavingLocally = true;
-                db.ref('items/' + iId).remove().then(() => {
-                    appState.isSavingLocally = false;
-                });
+                db.ref('items/' + iId).remove();
             }
         }
 
@@ -646,10 +629,8 @@
             const iId = document.getElementById('transfer-item-id').value;
             const newMilitantId = document.getElementById('transfer-militant').value;
 
-            appState.isSavingLocally = true;
-            db.ref(`items/${iId}/militantId`).set(newMilitantId).then(() => {
-                appState.isSavingLocally = false;
-                closeModal('modal-transfer');
+            db.ref(`items/${iId}/militantId`).set(newMilitantId, (error) => {
+                if (!error) closeModal('modal-transfer');
             });
         }
 
@@ -694,7 +675,6 @@
                 appState.categories[index] = newName.trim();
                 db.ref('categories').set(appState.categories);
 
-                // Mettre à jour les matériels existants de cette catégorie
                 Object.entries(appState.items).forEach(([iId, item]) => {
                     if (item.category === oldName) {
                         db.ref(`items/${iId}/category`).set(newName.trim());
