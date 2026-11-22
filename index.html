@@ -9,10 +9,13 @@
 
     <!-- Couleur de la barre d'adresse sur mobile (assortie au violet) -->
     <meta name="theme-color" content="#6b00bd">
+
+    <!-- Manifeste PWA dynamique pour installation en tant qu'appli -->
+    <link id="pwa-manifest" rel="manifest" href="">
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matériel Militant - Inventaire</title>
+    <title>Matos Militant - Gestion d'équipe & Inventaire</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -42,14 +45,17 @@
                     <i class="fa-solid fa-users-gear text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight">Matériel Militant</h1>
-                    <p class="text-xs text-slate-400">Qui a quoi ?</p>
+                    <h1 class="text-xl font-bold tracking-tight">Matos Militant</h1>
+                    <p class="text-xs text-slate-400">Qui a quoi ? & Gestion d'équipe</p>
                 </div>
             </div>
 
             <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <button onclick="openMilitantModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2">
                     <i class="fa-solid fa-user-plus text-pink-400"></i> Militants (<span id="militants-count">0</span>)
+                </button>
+                <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition" title="Télécharger sauvegarde">
+                    <i class="fa-solid fa-download"></i>
                 </button>
                 <button onclick="openCategoryModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition" title="Gérer les types de matériel">
                     <i class="fa-solid fa-tags"></i>
@@ -94,7 +100,8 @@
                 <select id="sort-order" onchange="renderApp()" class="py-2 px-3 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 text-slate-700">
                     <option value="az">Alphabétique (A-Z)</option>
                     <option value="za">Alphabétique (Z-A)</option>
-                    </select>
+                    <option value="mat-desc">Plus de matériel</option>
+                </select>
             </div>
         </div>
 
@@ -207,6 +214,36 @@
     </div>
 
     <script>
+        // CONFIGURATION PWA (Manifeste dynamique + Service Worker minimal pour installation)
+        (function setupPWA() {
+            const iconUrl = new URL('app-icon.png', window.location.href).href;
+            const manifest = {
+                name: "Matos Militant - LFI",
+                short_name: "Matos LFI",
+                description: "Gestion d'équipe et inventaire matériel militant",
+                start_url: window.location.href,
+                display: "standalone",
+                background_color: "#0f172a",
+                theme_color: "#6b00bd",
+                icons: [
+                    { src: iconUrl, sizes: "192x192", type: "image/png" },
+                    { src: iconUrl, sizes: "512x512", type: "image/png" }
+                ]
+            };
+            const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+            document.getElementById('pwa-manifest').href = URL.createObjectURL(blob);
+
+            if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+                const swCode = `
+                    self.addEventListener('install', () => self.skipWaiting());
+                    self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+                    self.addEventListener('fetch', () => {});
+                `;
+                const swBlob = new Blob([swCode], { type: 'application/javascript' });
+                navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+            }
+        })();
+
         // CONFIGURATION FIREBASE
         const firebaseConfig = {
             databaseURL: "https://inventaire-militant-default-rtdb.europe-west1.firebasedatabase.app"
@@ -221,6 +258,13 @@
             categories: ["Affiches", "Colle", "Tracts", "Barnum", "Tables", "Enceinte", "Micro", "Divers"],
             currentView: "militant"
         };
+
+        // Helper de tri alphabétique français
+        const compareAlpha = (a, b) => (a || '').localeCompare((b || ''), 'fr', { sensitivity: 'base' });
+
+        function getSortedCategories() {
+            return [...appState.categories].sort((a, b) => compareAlpha(a, b));
+        }
 
         // PALETTE DE COULEURS PRÉDÉFINIES POUR LES NOUVELLES CATÉGORIES AUTOMATIQUES
         const autoPalette = [
@@ -237,7 +281,6 @@
             "bg-cyan-100 text-cyan-800 border-cyan-200"
         ];
 
-        // COULEURS FIXES PAR DÉFAUT POUR LES CLASSIQUES
         const catColors = {
             "Affiches": "bg-purple-100 text-purple-700 border-purple-200",
             "Colle": "bg-amber-100 text-amber-800 border-amber-200",
@@ -250,14 +293,11 @@
 
         function getCatBadgeClass(cat) {
             if (catColors[cat]) return catColors[cat];
-            
-            // Si la catégorie n'est pas dans la liste fixe, on génère une couleur stable basée sur le nom de la catégorie
             let hash = 0;
             for (let i = 0; i < cat.length; i++) {
                 hash = cat.charCodeAt(i) + ((hash << 5) - hash);
             }
-            const index = Math.abs(hash) % autoPalette.length;
-            return autoPalette[index];
+            return autoPalette[Math.abs(hash) % autoPalette.length];
         }
 
         // INITIALISATION ÉCOUTEURS TEMPS RÉEL
@@ -268,6 +308,7 @@
                 db.ref('categories').set(appState.categories);
             }
             updateCategoryDropdowns();
+            renderCategoryList();
             renderApp();
         });
 
@@ -302,7 +343,6 @@
             renderApp();
         }
 
-        // Fonction pour basculer vers la vue par militant et cibler un militant précis
         function focusMilitant(mId) {
             switchView('militant');
             setTimeout(() => {
@@ -316,16 +356,17 @@
         }
 
         function updateCategoryDropdowns() {
+            const sortedCats = getSortedCategories();
             const selects = [document.getElementById('filter-category'), document.getElementById('item-category')];
             selects.forEach(sel => {
                 if (!sel) return;
                 const current = sel.value;
                 const isFilter = sel.id === 'filter-category';
                 sel.innerHTML = isFilter ? '<option value="">Toutes les catégories</option>' : '';
-                appState.categories.forEach(c => {
+                sortedCats.forEach(c => {
                     sel.innerHTML += `<option value="${c}">${c}</option>`;
                 });
-                if (current && appState.categories.includes(current)) sel.value = current;
+                if (current && sortedCats.includes(current)) sel.value = current;
             });
         }
 
@@ -333,13 +374,14 @@
             const search = document.getElementById('search-input').value.toLowerCase().trim();
             const filterCat = document.getElementById('filter-category').value;
             const sortOrder = document.getElementById('sort-order').value;
+            const sortedCats = getSortedCategories();
 
-            // 1. STATS
+            // 1. STATS (TRIÉES ALPHABÉTIQUEMENT)
             const statsContainer = document.getElementById('stats-container');
             statsContainer.innerHTML = '';
             
             const catTotals = {};
-            appState.categories.forEach(c => catTotals[c] = 0);
+            sortedCats.forEach(c => catTotals[c] = 0);
             
             Object.values(appState.items).forEach(item => {
                 if (catTotals[item.category] !== undefined) {
@@ -349,7 +391,7 @@
                 }
             });
 
-            appState.categories.forEach(cat => {
+            sortedCats.forEach(cat => {
                 const total = catTotals[cat] || 0;
                 statsContainer.innerHTML += `
                     <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm text-center flex flex-col justify-center">
@@ -359,25 +401,22 @@
                 `;
             });
 
-            // 2. VUE PAR MILITANT (AVEC TRI)
+            // 2. VUE PAR MILITANT
             const militantView = document.getElementById('militant-view');
             militantView.innerHTML = '';
             let militantsList = Object.entries(appState.militants);
 
             militantsList.sort((a, b) => {
-                const nameA = a[1].name.toLowerCase();
-                const nameB = b[1].name.toLowerCase();
-
                 if (sortOrder === 'az') {
-                    return nameA.localeCompare(nameB);
+                    return compareAlpha(a[1].name, b[1].name);
                 } else if (sortOrder === 'za') {
-                    return nameB.localeCompare(nameA);
+                    return compareAlpha(b[1].name, a[1].name);
                 } else if (sortOrder === 'mat-desc') {
                     const countA = Object.values(appState.items).filter(i => i.militantId === a[0]).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
                     const countB = Object.values(appState.items).filter(i => i.militantId === b[0]).reduce((sum, i) => sum + Number(i.quantity || 0), 0);
-                    return countB - countA;
+                    return countB - countA || compareAlpha(a[1].name, b[1].name);
                 }
-                return 0;
+                return compareAlpha(a[1].name, b[1].name);
             });
 
             if (militantsList.length === 0) {
@@ -405,7 +444,8 @@
                                (item.category && item.category.toLowerCase().includes(search)) ||
                                (item.title && item.title.toLowerCase().includes(search)) ||
                                (item.details && item.details.toLowerCase().includes(search));
-                    });
+                    })
+                    .sort(([, itemA], [, itemB]) => compareAlpha(itemA.title || itemA.category, itemB.title || itemB.category));
 
                 if (search && !matchSearch && mItems.length === 0) return;
 
@@ -474,7 +514,7 @@
                 `;
             });
 
-            // 3. VUE PAR SECTEUR
+            // 3. VUE PAR SECTEUR (SECTEURS ET MILITANTS TRIÉS A-Z)
             const sectorView = document.getElementById('sector-view');
             sectorView.innerHTML = '';
 
@@ -488,16 +528,19 @@
                 sectorsMap[sectorName].push({ id: mId, ...mData });
             });
 
+            const sortedSectors = Object.entries(sectorsMap).sort(([a], [b]) => compareAlpha(a, b));
             let hasSectorData = false;
 
-            Object.entries(sectorsMap).forEach(([sectorName, militantsInSector]) => {
+            sortedSectors.forEach(([sectorName, militantsInSector]) => {
+                militantsInSector.sort((a, b) => compareAlpha(a.name, b.name));
+
                 let sectorMilitantsHtml = '';
-                let totalSectorMatCount = 0;
 
                 militantsInSector.forEach(militant => {
                     let mItems = Object.entries(appState.items)
                         .filter(([iId, item]) => item.militantId === militant.id)
-                        .filter(([iId, item]) => !filterCat || item.category === filterCat);
+                        .filter(([iId, item]) => !filterCat || item.category === filterCat)
+                        .sort(([, a], [, b]) => compareAlpha(a.category, b.category));
 
                     const matchSearch = sectorName.toLowerCase().includes(search) ||
                                         militant.name.toLowerCase().includes(search) ||
@@ -505,8 +548,6 @@
                                         (militant.role && militant.role.toLowerCase().includes(search));
 
                     if (search && !matchSearch && mItems.length === 0) return;
-
-                    totalSectorMatCount += mItems.reduce((acc, [i, item]) => acc + Number(item.quantity || 0), 0);
 
                     let itemBadges = mItems.map(([iId, item]) => `
                         <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded border ${getCatBadgeClass(item.category)}">
@@ -566,12 +607,12 @@
                 `;
             }
 
-            // 4. VUE PAR MATÉRIEL
+            // 4. VUE PAR MATÉRIEL (CATÉGORIES ET DETENTEURS TRIÉS A-Z)
             const materialView = document.getElementById('material-view');
             materialView.innerHTML = '';
 
             const itemsByCategory = {};
-            appState.categories.forEach(c => itemsByCategory[c] = []);
+            sortedCats.forEach(c => itemsByCategory[c] = []);
 
             Object.entries(appState.items).forEach(([iId, item]) => {
                 if (!filterCat || item.category === filterCat) {
@@ -583,14 +624,20 @@
             let hasMaterial = false;
 
             Object.entries(itemsByCategory).forEach(([catName, itemsList]) => {
-                const filteredItems = itemsList.filter(item => {
-                    if (!search) return true;
-                    const mData = appState.militants[item.militantId] || { name: '' };
-                    return catName.toLowerCase().includes(search) ||
-                           (item.title && item.title.toLowerCase().includes(search)) ||
-                           (item.details && item.details.toLowerCase().includes(search)) ||
-                           mData.name.toLowerCase().includes(search);
-                });
+                const filteredItems = itemsList
+                    .filter(item => {
+                        if (!search) return true;
+                        const mData = appState.militants[item.militantId] || { name: '' };
+                        return catName.toLowerCase().includes(search) ||
+                               (item.title && item.title.toLowerCase().includes(search)) ||
+                               (item.details && item.details.toLowerCase().includes(search)) ||
+                               mData.name.toLowerCase().includes(search);
+                    })
+                    .sort((a, b) => {
+                        const nameA = (appState.militants[a.militantId] || { name: '' }).name;
+                        const nameB = (appState.militants[b.militantId] || { name: '' }).name;
+                        return compareAlpha(nameA, nameB) || compareAlpha(a.title || catName, b.title || catName);
+                    });
 
                 if (filteredItems.length === 0) return;
                 hasMaterial = true;
@@ -711,7 +758,7 @@
             if (itemId && appState.items[itemId]) {
                 const item = appState.items[itemId];
                 document.getElementById('item-militant').value = item.militantId || '';
-                document.getElementById('item-category').value = item.category || appState.categories[0];
+                document.getElementById('item-category').value = item.category || getSortedCategories()[0] || '';
                 document.getElementById('item-title').value = item.title || '';
                 document.getElementById('item-quantity').value = item.quantity || 1;
                 document.getElementById('item-details').value = item.details || '';
@@ -775,7 +822,7 @@
         function populateMilitantsDropdown(selectId) {
             const sel = document.getElementById(selectId);
             sel.innerHTML = '';
-            let sortedMilitants = Object.entries(appState.militants).sort((a, b) => a[1].name.localeCompare(b[1].name));
+            const sortedMilitants = Object.entries(appState.militants).sort((a, b) => compareAlpha(a[1].name, b[1].name));
 
             sortedMilitants.forEach(([id, m]) => {
                 sel.innerHTML += `<option value="${id}">${m.name} ${m.sector ? '(' + m.sector + ')' : ''}</option>`;
@@ -791,11 +838,13 @@
             const container = document.getElementById('categories-list');
             if (!container) return;
             container.innerHTML = '';
-            appState.categories.forEach((cat, idx) => {
+            const sortedCats = getSortedCategories();
+            sortedCats.forEach(cat => {
+                const realIdx = appState.categories.indexOf(cat);
                 container.innerHTML += `
                     <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-200">
                         <span class="text-xs font-semibold text-slate-700">${cat}</span>
-                        <button onclick="removeCategory(${idx})" class="text-slate-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-xmark"></i></button>
+                        <button onclick="removeCategory(${realIdx})" class="text-slate-400 hover:text-rose-600 text-xs"><i class="fa-solid fa-xmark"></i></button>
                     </div>
                 `;
             });
@@ -813,7 +862,7 @@
         }
 
         function removeCategory(idx) {
-            if (confirm("Supprimer cette catégorie ?")) {
+            if (idx >= 0 && confirm("Supprimer cette catégorie ?")) {
                 appState.categories.splice(idx, 1);
                 db.ref('categories').set(appState.categories);
             }
