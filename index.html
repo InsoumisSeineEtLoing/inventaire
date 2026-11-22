@@ -26,6 +26,9 @@
     <!-- Google Fonts Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- QRCode.js pour générer le QR code de partage -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -54,11 +57,11 @@
                 <button onclick="openMilitantModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2">
                     <i class="fa-solid fa-user-plus text-pink-400"></i> Militants (<span id="militants-count">0</span>)
                 </button>
-                <button onclick="exportData()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition" title="Télécharger sauvegarde">
-                    <i class="fa-solid fa-download"></i>
+                <button onclick="openShareModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2" title="Partager le lien ou le QR code">
+                    <i class="fa-solid fa-qrcode text-purple-400"></i> Partager
                 </button>
-                <button onclick="openCategoryModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 p-2 sm:px-3 sm:py-2 rounded-lg font-medium transition" title="Gérer les types de matériel">
-                    <i class="fa-solid fa-tags"></i>
+                <button onclick="openCategoryModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2" title="Gérer les types de matériel">
+                    <i class="fa-solid fa-tags text-amber-400"></i> Matos
                 </button>
                 <button onclick="openItemModal()" class="bg-pink-600 hover:bg-pink-700 text-white text-xs sm:text-sm px-4 py-2 rounded-lg font-semibold shadow-md transition flex items-center gap-2">
                     <i class="fa-solid fa-circle-plus"></i> Attribuer
@@ -111,6 +114,34 @@
         <div id="material-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden"></div>
 
     </main>
+
+    <!-- MODAL PARTAGE (QR CODE + LIEN) -->
+    <div id="modal-share" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative text-center">
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Partager l'application</h3>
+            <p class="text-xs text-slate-500 mb-4">Scanne le QR code ou copie le lien pour transmettre l'accès.</p>
+
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center justify-center mb-4">
+                <div id="qrcode-container"></div>
+            </div>
+
+            <div class="flex items-center gap-2 mb-4">
+                <input type="text" id="share-url-input" readonly class="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 select-all">
+                <button type="button" onclick="copyShareLink()" id="btn-copy-link" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 whitespace-nowrap">
+                    <i class="fa-solid fa-copy"></i> Copier
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <button type="button" id="btn-native-share" onclick="nativeShareApp()" class="hidden w-full py-2.5 bg-purple-700 hover:bg-purple-800 text-white rounded-lg text-xs font-semibold shadow transition items-center justify-center gap-2">
+                    <i class="fa-solid fa-share-nodes"></i> Partager via le téléphone
+                </button>
+                <button type="button" onclick="closeModal('modal-share')" class="w-full py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- MODAL MILITANT -->
     <div id="modal-militant" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
@@ -243,6 +274,75 @@
                 navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
             }
         })();
+
+        // PARTAGE : QR CODE + COPIE + PARTAGE NATIF
+        function getCleanShareUrl() {
+            const url = new URL(window.location.href);
+            url.search = '';
+            url.hash = '';
+            return url.toString();
+        }
+
+        function openShareModal() {
+            const shareUrl = getCleanShareUrl();
+            document.getElementById('share-url-input').value = shareUrl;
+
+            const qrContainer = document.getElementById('qrcode-container');
+            qrContainer.innerHTML = '';
+            if (typeof QRCode !== 'undefined') {
+                new QRCode(qrContainer, {
+                    text: shareUrl,
+                    width: 180,
+                    height: 180,
+                    colorDark: "#0f172a",
+                    colorLight: "#f8fafc",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+            }
+
+            const nativeBtn = document.getElementById('btn-native-share');
+            if (navigator.share) {
+                nativeBtn.classList.remove('hidden');
+                nativeBtn.classList.add('flex');
+            } else {
+                nativeBtn.classList.add('hidden');
+                nativeBtn.classList.remove('flex');
+            }
+
+            const copyBtn = document.getElementById('btn-copy-link');
+            copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> Copier';
+
+            document.getElementById('modal-share').classList.remove('hidden');
+        }
+
+        async function copyShareLink() {
+            const url = document.getElementById('share-url-input').value;
+            const copyBtn = document.getElementById('btn-copy-link');
+            try {
+                await navigator.clipboard.writeText(url);
+            } catch (_) {
+                const input = document.getElementById('share-url-input');
+                input.select();
+                document.execCommand('copy');
+            }
+            copyBtn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Copié';
+            setTimeout(() => {
+                copyBtn.innerHTML = '<i class="fa-solid fa-copy"></i> Copier';
+            }, 2000);
+        }
+
+        async function nativeShareApp() {
+            const url = getCleanShareUrl();
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: 'Matos Militant',
+                        text: "Accès à l'inventaire et à la gestion du matériel militant :",
+                        url
+                    });
+                } catch (_) {}
+            }
+        }
 
         // CONFIGURATION FIREBASE
         const firebaseConfig = {
