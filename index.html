@@ -42,23 +42,28 @@
 
     <!-- HEADER TOP -->
     <header class="bg-[#0f172a] text-white py-4 px-4 sm:px-8 shadow-md">
-        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-pink-600 p-2.5 rounded-xl flex items-center justify-center text-white shadow-lg">
-                    <i class="fa-solid fa-users-gear text-xl"></i>
+        <div class="max-w-7xl mx-auto flex flex-col gap-3">
+            <!-- Ligne supérieure : Titre à gauche, bouton Partager tout en haut à droite -->
+            <div class="flex justify-between items-start gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="bg-pink-600 p-2.5 rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <i class="fa-solid fa-users-gear text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight">Matos Militant</h1>
+                        <p class="text-xs text-slate-400">Qui a quoi ? & Gestion d'équipe</p>
+                    </div>
                 </div>
-                <div>
-                    <h1 class="text-xl font-bold tracking-tight">Matos Militant</h1>
-                    <p class="text-xs text-slate-400">Qui a quoi ? & Gestion d'équipe</p>
-                </div>
+
+                <button onclick="openShareModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 w-9 h-9 rounded-lg transition flex items-center justify-center shrink-0" title="Partager">
+                    <i class="fa-solid fa-share-nodes text-sm text-purple-400"></i>
+                </button>
             </div>
 
-            <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <!-- Ligne inférieure : Boutons d'action alignés à droite -->
+            <div class="flex items-center justify-end gap-2 sm:gap-3 flex-wrap">
                 <button onclick="openMilitantModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2">
-                    <i class="fa-solid fa-user-plus text-pink-400"></i> Militants (<span id="militants-count">0</span>)
-                </button>
-                <button onclick="openShareModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2" title="Partager le lien ou le QR code">
-                    <i class="fa-solid fa-qrcode text-purple-400"></i> Partager
+                    <i class="fa-solid fa-user-plus text-pink-400"></i> Militants
                 </button>
                 <button onclick="openCategoryModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs sm:text-sm text-slate-200 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2" title="Gérer les types de matériel">
                     <i class="fa-solid fa-tags text-amber-400"></i> Matos
@@ -114,6 +119,28 @@
         <div id="material-view" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 hidden"></div>
 
     </main>
+
+    <!-- MODAL CHOIX AU SCAN DU QR CODE (INSTALLER OU OUVRIR SUR LE WEB) -->
+    <div id="modal-qr-choice" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative text-center">
+            <div class="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center mx-auto mb-3 text-xl">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900 mb-1">Matos Militant</h3>
+            <p class="text-xs text-slate-500 mb-5">Comment souhaites-tu accéder à l'inventaire sur cet appareil ?</p>
+
+            <div class="space-y-2.5">
+                <button type="button" onclick="triggerInstallFromQr()" class="w-full py-3 px-4 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-semibold shadow transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> Installer l'application
+                </button>
+                <button type="button" onclick="continueOnWeb()" class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-globe"></i> Ouvrir sur le navigateur web
+                </button>
+            </div>
+
+            <div id="qr-install-help" class="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-left text-[11px] text-amber-900 hidden"></div>
+        </div>
+    </div>
 
     <!-- MODAL PARTAGE (QR CODE + LIEN) -->
     <div id="modal-share" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
@@ -245,14 +272,25 @@
     </div>
 
     <script>
+        let deferredInstallPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+        });
+
         // CONFIGURATION PWA (Manifeste dynamique + Service Worker minimal pour installation)
         (function setupPWA() {
-            const iconUrl = new URL('app-icon.png', window.location.href).href;
+            const baseUrl = new URL(window.location.href);
+            baseUrl.search = '';
+            baseUrl.hash = '';
+            const iconUrl = new URL('app-icon.png', baseUrl.href).href;
+
             const manifest = {
                 name: "Matos Militant - LFI",
                 short_name: "Matos LFI",
                 description: "Gestion d'équipe et inventaire matériel militant",
-                start_url: window.location.href,
+                start_url: baseUrl.href,
                 display: "standalone",
                 background_color: "#0f172a",
                 theme_color: "#6b00bd",
@@ -273,9 +311,51 @@
                 const swBlob = new Blob([swCode], { type: 'application/javascript' });
                 navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
             }
+
+            // Détecter l'arrivée via QR code (?install=1) hors mode déjà installé
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('install') === '1' && !isStandalone) {
+                document.getElementById('modal-qr-choice').classList.remove('hidden');
+            }
         })();
 
-        // PARTAGE : QR CODE + COPIE + PARTAGE NATIF
+        async function triggerInstallFromQr() {
+            const helpBox = document.getElementById('qr-install-help');
+            if (deferredInstallPrompt) {
+                deferredInstallPrompt.prompt();
+                await deferredInstallPrompt.userChoice;
+                deferredInstallPrompt = null;
+                closeModal('modal-qr-choice');
+                cleanInstallQueryParam();
+            } else {
+                const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+                helpBox.innerHTML = isIos
+                    ? '<strong>Sur iPhone / iPad :</strong> appuie sur le bouton <strong>Partager</strong> en bas/haut de Safari, puis sur <strong>« Sur l\'écran d\'accueil »</strong>.'
+                    : '<strong>Installation manuelle :</strong> ouvre le menu du navigateur (<strong>⋮</strong>) puis appuie sur <strong>« Installer l\'application »</strong> ou <strong>« Ajouter à l\'écran d\'accueil »</strong>.';
+                helpBox.classList.remove('hidden');
+            }
+        }
+
+        function continueOnWeb() {
+            closeModal('modal-qr-choice');
+            cleanInstallQueryParam();
+        }
+
+        function cleanInstallQueryParam() {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('install');
+            window.history.replaceState({}, '', url.toString());
+        }
+
+        // PARTAGE : QR CODE (AVEC ?install=1) + COPIE + PARTAGE NATIF
+        function getQrScanUrl() {
+            const url = new URL(window.location.href);
+            url.search = '?install=1';
+            url.hash = '';
+            return url.toString();
+        }
+
         function getCleanShareUrl() {
             const url = new URL(window.location.href);
             url.search = '';
@@ -284,6 +364,7 @@
         }
 
         function openShareModal() {
+            const qrUrl = getQrScanUrl();
             const shareUrl = getCleanShareUrl();
             document.getElementById('share-url-input').value = shareUrl;
 
@@ -291,7 +372,7 @@
             qrContainer.innerHTML = '';
             if (typeof QRCode !== 'undefined') {
                 new QRCode(qrContainer, {
-                    text: shareUrl,
+                    text: qrUrl,
                     width: 180,
                     height: 180,
                     colorDark: "#0f172a",
@@ -359,14 +440,12 @@
             currentView: "militant"
         };
 
-        // Helper de tri alphabétique français
         const compareAlpha = (a, b) => (a || '').localeCompare((b || ''), 'fr', { sensitivity: 'base' });
 
         function getSortedCategories() {
             return [...appState.categories].sort((a, b) => compareAlpha(a, b));
         }
 
-        // PALETTE DE COULEURS PRÉDÉFINIES POUR LES NOUVELLES CATÉGORIES AUTOMATIQUES
         const autoPalette = [
             "bg-purple-100 text-purple-700 border-purple-200",
             "bg-amber-100 text-amber-800 border-amber-200",
@@ -414,7 +493,6 @@
 
         db.ref('militants').on('value', snap => {
             appState.militants = snap.val() || {};
-            document.getElementById('militants-count').innerText = Object.keys(appState.militants).length;
             renderApp();
         });
 
@@ -476,7 +554,7 @@
             const sortOrder = document.getElementById('sort-order').value;
             const sortedCats = getSortedCategories();
 
-            // 1. STATS (TRIÉES ALPHABÉTIQUEMENT)
+            // 1. STATS
             const statsContainer = document.getElementById('stats-container');
             statsContainer.innerHTML = '';
             
@@ -614,7 +692,7 @@
                 `;
             });
 
-            // 3. VUE PAR SECTEUR (SECTEURS ET MILITANTS TRIÉS A-Z)
+            // 3. VUE PAR SECTEUR
             const sectorView = document.getElementById('sector-view');
             sectorView.innerHTML = '';
 
@@ -707,7 +785,7 @@
                 `;
             }
 
-            // 4. VUE PAR MATÉRIEL (CATÉGORIES ET DETENTEURS TRIÉS A-Z)
+            // 4. VUE PAR MATÉRIEL
             const materialView = document.getElementById('material-view');
             materialView.innerHTML = '';
 
@@ -966,14 +1044,6 @@
                 appState.categories.splice(idx, 1);
                 db.ref('categories').set(appState.categories);
             }
-        }
-
-        function exportData() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
-            const dlAnchorElem = document.createElement('a');
-            dlAnchorElem.setAttribute("href", dataStr);
-            dlAnchorElem.setAttribute("download", `sauvegarde_inventaire_${new Date().toISOString().slice(0,10)}.json`);
-            dlAnchorElem.click();
         }
     </script>
 </body>
