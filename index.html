@@ -120,6 +120,21 @@
 
     </main>
 
+    <!-- MODAL VISIONNEUSE PHOTO -->
+    <div id="modal-photo-view" onclick="closeModal('modal-photo-view')" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
+        <div onclick="event.stopPropagation()" class="bg-slate-900 rounded-2xl max-w-2xl w-full p-4 shadow-2xl border border-slate-700 relative">
+            <div class="flex justify-between items-center mb-3">
+                <h3 id="photo-view-title" class="text-sm font-bold text-white truncate pr-4">Photo du matériel</h3>
+                <button type="button" onclick="closeModal('modal-photo-view')" class="text-slate-400 hover:text-white text-sm px-2 py-1 rounded-lg bg-slate-800">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="flex items-center justify-center bg-black/40 rounded-xl overflow-hidden max-h-[75vh]">
+                <img id="photo-view-img" src="" alt="Aperçu du matériel" class="max-h-[75vh] w-auto object-contain">
+            </div>
+        </div>
+    </div>
+
     <!-- MODAL CHOIX AU SCAN DU QR CODE (INSTALLER OU OUVRIR SUR LE WEB) -->
     <div id="modal-qr-choice" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 relative text-center">
@@ -202,10 +217,11 @@
 
     <!-- MODAL MATÉRIEL -->
     <div id="modal-item" class="fixed inset-0 modal-bg z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative max-h-[90vh] overflow-y-auto">
             <h3 id="modal-item-title" class="text-lg font-bold text-slate-900 mb-4">Attribuer du matériel</h3>
             <form onsubmit="handleSaveItem(event)" class="space-y-4">
                 <input type="hidden" id="item-id">
+                <input type="hidden" id="item-photo-data">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Militant responsable *</label>
                     <select id="item-militant" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none bg-white"></select>
@@ -226,6 +242,25 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Détail / Emplacement / Notes</label>
                     <input type="text" id="item-details" placeholder="Ex: Dans son sac à dos, Chez elle, Garage..." class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-pink-500 outline-none">
                 </div>
+
+                <!-- PHOTO DE CE MATÉRIEL PRÉCIS -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Photo de ce matériel</label>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <label class="cursor-pointer bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 px-3 py-2 rounded-lg text-xs font-semibold transition inline-flex items-center gap-1.5">
+                            <i class="fa-solid fa-camera text-pink-600"></i> Photo / Galerie
+                            <input type="file" id="item-photo-file" accept="image/*" capture="environment" onchange="handleItemPhotoSelected(event)" class="hidden">
+                        </label>
+                        <button type="button" id="btn-remove-photo" onclick="clearItemPhoto()" class="hidden text-rose-600 hover:bg-rose-50 px-2.5 py-2 rounded-lg text-xs font-semibold transition">
+                            <i class="fa-solid fa-trash-can"></i> Retirer
+                        </button>
+                        <span id="photo-status-text" class="text-[11px] text-slate-400"></span>
+                    </div>
+                    <div id="item-photo-preview-wrap" class="mt-2.5 hidden">
+                        <img id="item-photo-preview" src="" alt="Aperçu" class="w-full h-36 object-cover rounded-xl border border-slate-200">
+                    </div>
+                </div>
+
                 <div class="flex justify-end gap-2 pt-3">
                     <button type="button" onclick="closeModal('modal-item')" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg">Annuler</button>
                     <button type="submit" class="px-4 py-2 text-xs font-semibold bg-pink-600 hover:bg-pink-700 text-white rounded-lg shadow">Sauvegarder</button>
@@ -312,7 +347,6 @@
                 navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
             }
 
-            // Détecter l'arrivée via QR code (?install=1) hors mode déjà installé
             const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
             const params = new URLSearchParams(window.location.search);
             if (params.get('install') === '1' && !isStandalone) {
@@ -423,6 +457,94 @@
                     });
                 } catch (_) {}
             }
+        }
+
+        // COMPRESSION & GESTION PHOTO PAR MATÉRIEL
+        function compressImageFile(file, maxWidth = 800, quality = 0.72) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', quality));
+                    };
+                    img.onerror = reject;
+                    img.src = ev.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function setItemPhotoPreview(dataUrl) {
+            document.getElementById('item-photo-data').value = dataUrl || '';
+            const wrap = document.getElementById('item-photo-preview-wrap');
+            const img = document.getElementById('item-photo-preview');
+            const removeBtn = document.getElementById('btn-remove-photo');
+            const statusText = document.getElementById('photo-status-text');
+
+            if (dataUrl) {
+                img.src = dataUrl;
+                wrap.classList.remove('hidden');
+                removeBtn.classList.remove('hidden');
+                statusText.textContent = 'Photo prête';
+            } else {
+                img.src = '';
+                wrap.classList.add('hidden');
+                removeBtn.classList.add('hidden');
+                statusText.textContent = '';
+            }
+        }
+
+        async function handleItemPhotoSelected(e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) return;
+            const statusText = document.getElementById('photo-status-text');
+            statusText.textContent = 'Compression...';
+            try {
+                const compressed = await compressImageFile(file);
+                setItemPhotoPreview(compressed);
+            } catch (_) {
+                statusText.textContent = 'Erreur image';
+            }
+            e.target.value = '';
+        }
+
+        function clearItemPhoto() {
+            setItemPhotoPreview('');
+        }
+
+        function openPhotoModal(itemId) {
+            const item = appState.items[itemId];
+            if (!item || !item.photo) return;
+            const mData = appState.militants[item.militantId];
+            const label = `${item.title || item.category}${mData ? ' — ' + mData.name : ''}`;
+            document.getElementById('photo-view-title').textContent = label;
+            document.getElementById('photo-view-img').src = item.photo;
+            document.getElementById('modal-photo-view').classList.remove('hidden');
+        }
+
+        function renderItemPhotoBlock(itemId, item) {
+            if (!item.photo) return '';
+            return `
+                <button type="button" onclick="openPhotoModal('${itemId}')" class="mt-2.5 w-full group relative rounded-lg overflow-hidden border border-slate-200 bg-slate-100 block text-left">
+                    <img src="${item.photo}" alt="${item.title || item.category}" class="w-full h-28 object-cover group-hover:scale-[1.02] transition duration-200">
+                    <span class="absolute bottom-1.5 right-1.5 bg-slate-900/75 text-white text-[10px] font-medium px-2 py-0.5 rounded-md">
+                        <i class="fa-solid fa-expand mr-1"></i>Agrandir
+                    </span>
+                </button>
+            `;
         }
 
         // CONFIGURATION FIREBASE
@@ -650,6 +772,7 @@
                                     </div>
                                     <h4 class="text-xs font-bold text-slate-800">${item.title || item.category}</h4>
                                     ${item.details ? `<p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1"><i class="fa-solid fa-location-dot text-[10px] text-slate-400"></i> ${item.details}</p>` : ''}
+                                    ${renderItemPhotoBlock(iId, item)}
                                 </div>
                                 
                                 <div class="flex justify-between items-center mt-3 pt-2 border-t border-slate-200/60">
@@ -729,7 +852,7 @@
 
                     let itemBadges = mItems.map(([iId, item]) => `
                         <span class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded border ${getCatBadgeClass(item.category)}">
-                            ${item.category} (x${item.quantity})
+                            ${item.category} (x${item.quantity})${item.photo ? ' <i class="fa-solid fa-camera text-[9px]"></i>' : ''}
                         </span>
                     `).join(' ');
 
@@ -828,14 +951,15 @@
                     holdersHtml += `
                         <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-2 last:mb-0">
                             <div class="flex justify-between items-start gap-2">
-                                <div>
+                                <div class="flex-1 min-w-0">
                                     <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                                         <i class="fa-regular fa-user text-pink-600 text-[10px]"></i> ${mData.name}
                                     </div>
                                     <p class="text-[11px] font-semibold text-slate-700 mt-0.5">${item.title || catName}</p>
                                     ${item.details ? `<p class="text-[10px] text-slate-500 mt-0.5 flex items-center gap-1"><i class="fa-solid fa-location-dot text-slate-400"></i> ${item.details}</p>` : ''}
+                                    ${renderItemPhotoBlock(item.id, item)}
                                 </div>
-                                <span class="text-xs font-black bg-white px-2 py-1 rounded-md border border-slate-200 text-slate-800">x${item.quantity}</span>
+                                <span class="text-xs font-black bg-white px-2 py-1 rounded-md border border-slate-200 text-slate-800 shrink-0">x${item.quantity}</span>
                             </div>
 
                             <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-200/60">
@@ -940,10 +1064,12 @@
                 document.getElementById('item-title').value = item.title || '';
                 document.getElementById('item-quantity').value = item.quantity || 1;
                 document.getElementById('item-details').value = item.details || '';
+                setItemPhotoPreview(item.photo || '');
             } else {
                 document.getElementById('item-title').value = '';
                 document.getElementById('item-quantity').value = 1;
                 document.getElementById('item-details').value = '';
+                setItemPhotoPreview('');
             }
             document.getElementById('modal-item').classList.remove('hidden');
         }
@@ -956,12 +1082,14 @@
         function handleSaveItem(e) {
             e.preventDefault();
             const itemId = document.getElementById('item-id').value;
+            const photoVal = document.getElementById('item-photo-data').value || null;
             const data = {
                 militantId: document.getElementById('item-militant').value,
                 category: document.getElementById('item-category').value,
                 title: document.getElementById('item-title').value,
                 quantity: Number(document.getElementById('item-quantity').value),
-                details: document.getElementById('item-details').value
+                details: document.getElementById('item-details').value,
+                photo: photoVal
             };
             if (itemId) {
                 db.ref('items/' + itemId).update(data);
